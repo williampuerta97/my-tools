@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finanzas Mensuales</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #ffffff; margin: 0; padding: 20px; }
+    h1 { text-align: center; }
+    .container { max-width: 1000px; margin: auto; }
+    .card { background: #f5f5f5; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end; }
+    .form-grid input { width: 95%; }
+    label { font-size: 12px; font-weight: bold; }
+
+    input, select, button { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; }
+    button { background: #8fb4ff; color: white; border: none; cursor: pointer; font-weight: bold; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border-bottom: 1px solid #ddd; padding: 8px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+    .total { font-size: 18px; font-weight: bold; }
+
+    .done { text-decoration: line-through; opacity: 0.6; }
+
+    .table-container {overflow-x: auto;max-width: 100%;}
+
+    table {border-collapse: collapse}
+
+    th, td {padding: 8px;border: 1px solid #ccc;background: white;}
+
+    .actions { display: flex; gap: 5px; justify-content: flex-end; }
+
+    /* Responsive */ 
+    @media (max-width: 768px) { 
+      .form-grid { grid-template-columns: 1fr; } 
+      .grid { grid-template-columns: 1fr; } 
+      table, thead, tbody, th, td, tr { display: block; } 
+      thead { display: none; } 
+      tr { margin-bottom: 15px; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); } 
+      td { display: flex; justify-content: space-between; padding: 6px 0; border: none; } 
+      td::before { font-weight: bold; } 
+      td:nth-child(1)::before { content: "Nombre"; } 
+      td:nth-child(2)::before { content: "Monto"; } 
+      td:nth-child(3)::before { content: "Tipo"; } 
+      td:nth-child(4)::before { content: "Concepto"; } 
+      td:nth-child(5)::before { content: "Finalizado"; } 
+      .actions, td:last-child { display: flex; gap: 5px; justify-content: flex-end; } 
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Finanzas Mensuales</h1>
+
+  <!-- Selector mes/año -->
+  <div class="card">
+    <h3>Periodo</h3>
+    <div class="form-grid">
+      <div>
+        <label>Año</label>
+        <input id="year" type="number" value="2026" />
+      </div>
+      <div>
+        <label>Mes</label>
+        <select id="month">
+          <option value="1">Enero</option>
+          <option value="2">Febrero</option>
+          <option value="3">Marzo</option>
+          <option value="4">Abril</option>
+          <option value="5">Mayo</option>
+          <option value="6">Junio</option>
+          <option value="7">Julio</option>
+          <option value="8">Agosto</option>
+          <option value="9">Septiembre</option>
+          <option value="10">Octubre</option>
+          <option value="11">Noviembre</option>
+          <option value="12">Diciembre</option>
+        </select>
+      </div>
+      <div>
+        <button onclick="loadData()">Cargar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Configuración mensual</h3>
+    <input id="salary" type="text" placeholder="$0" />
+  </div>
+
+  <div class="card">
+    <h3>Agregar movimiento</h3>
+    <div class="form-grid">
+      <input id="name" placeholder="Nombre" />
+      <input id="amount" placeholder="$0" />
+      <select id="type">
+        <option value="fixed">Fijo</option>
+        <option value="variable">Variable</option>
+        <option value="saving">Ahorro</option>
+      </select>
+      <select id="concept">
+        <option value="salary">Salario</option>
+        <option value="saving">Ahorro</option>
+      </select>
+      <button onclick="addExpense()">Agregar</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h3>Fijos</h3><div id="totalFixed"></div></div>
+    <div class="card"><h3>Variables</h3><div id="totalVariable"></div></div>
+    <div class="card"><h3>Ahorros</h3><div id="totalSavings"></div></div>
+    <div class="card"><h3>Restante</h3><div id="remaining"></div></div>
+  </div>
+
+  <div class="card table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th><th>Monto</th><th>Tipo</th><th>Concepto</th><th>Finalizado</th><th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="expenseTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const formatCOP = v => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0}).format(v);
+const clean = v => parseFloat(v.replace(/\D/g,'')) || 0;
+const translations = {
+  'fixed': 'Fijo',
+  'variable': 'Variable',
+  'saving': 'Ahorro',
+  'salary': 'Salario',
+  'saving': 'Ahorro',
+  'done': 'Completado',
+}
+
+let expenses = [];
+let salary = 0;
+let currentKey = '';
+
+function getKey(){
+  const y = document.getElementById('year').value;
+  const m = document.getElementById('month').value;
+  return `finanzas-${y}-${m}`;
+}
+
+function loadData(){
+  currentKey = getKey();
+  const dataRaw = localStorage.getItem(currentKey);
+
+  if(!dataRaw){
+    // default data
+    expenses = [
+      { name: "Arriendo", amount: 400000, type: "fixed", concept: "salary", done:false },
+      { name: "Internet", amount: 120000, type: "fixed", concept: "salary", done:false },
+      { name: "T.C", amount: 100000, type: "fixed", concept: "salary", done:false },
+      { name: "Crédito", amount: 600000, type: "fixed", concept: "salary", done:false },
+      { name: "Remesa", amount: 550000, type: "fixed", concept: "salary", done:false },
+      { name: "Credito 20 minutos", amount: 138000, type: "fixed", concept: "salary", done:false },
+      { name: "Recibos Casa", amount: 60000, type: "fixed", concept: "salary", done:false },
+      { name: "Recibos Mamá", amount: 120000, type: "fixed", concept: "salary", done:false },
+      { name: "Alimento Gatas", amount: 75000, type: "fixed", concept: "salary", done:false },
+      { name: "Alimento Perras", amount: 130000, type: "fixed", concept: "salary", done:false }
+    ];
+    salary = 4000000;
+    saveData();
+  } else {
+    const data = JSON.parse(dataRaw);
+    expenses = data.expenses || [];
+    salary = data.salary || 4000000;
+  }
+
+  document.getElementById('salary').value = formatCOP(salary);
+  render();
+}
+
+function saveData(){
+  localStorage.setItem(currentKey, JSON.stringify({ expenses, salary }));
+}
+
+document.getElementById("amount").addEventListener("input", e => e.target.value = formatCOP(clean(e.target.value)));
+
+document.getElementById("salary").addEventListener("input", e => {
+  salary = clean(e.target.value);
+  e.target.value = formatCOP(salary);
+  saveData();
+  render();
+});
+
+function addExpense(){
+  const name = document.getElementById("name").value;
+  const amount = clean(document.getElementById("amount").value);
+  const type = document.getElementById("type").value;
+  const concept = document.getElementById("concept").value;
+
+  if(!name || !amount) return;
+
+  expenses.push({ name, amount, type, concept, done:false });
+  saveData();
+  render();
+}
+
+function editExpense(index) {
+  const newName = prompt("Nuevo nombre", expenses[index].name);
+  const newAmountRaw = prompt("Nuevo monto", expenses[index].amount);
+  const newType = prompt("Tipo (fixed, variable, saving)", expenses[index].type);
+  const newConcept = prompt("Concepto (salary, saving)", expenses[index].concept);
+
+  if (newName && newAmountRaw) {
+    expenses[index].name = newName;
+    expenses[index].amount = parseFloat(newAmountRaw);
+    if (newType) expenses[index].type = newType;
+    if (newConcept) expenses[index].concept = newConcept;
+    saveData();
+    render();
+  }
+}
+
+function toggleDone(i){
+  expenses[i].done = !expenses[i].done;
+  saveData();
+  render();
+}
+
+function deleteExpense(i){
+  expenses.splice(i,1);
+  saveData();
+  render();
+}
+
+function render(){
+  let f=0,v=0,s=0;
+  const table = document.getElementById('expenseTable');
+  table.innerHTML='';
+
+  expenses.forEach((e,i)=>{
+    if(e.type==='fixed')f+=e.amount;
+    if(e.type==='variable')v+=e.amount;
+    if(e.type==='saving')s+=e.amount;
+
+    table.innerHTML+=`
+      <tr class="${e.done?'done':''}">
+        <td>${e.name}</td>
+        <td>${formatCOP(e.amount)}</td>
+        <td>${translations[e.type]}</td>
+        <td>${translations[e.concept]}</td>
+        <td><input type="checkbox" ${e.done?'checked':''} onclick="toggleDone(${i})"></td>
+        <td class="actions">
+          <button onclick="editExpense(${i})">Editar</button>
+          <button onclick="deleteExpense(${i})">Eliminar</button>
+        </td>
+      </tr>`;
+  });
+
+  document.getElementById('totalFixed').innerText=formatCOP(f);
+  document.getElementById('totalVariable').innerText=formatCOP(v);
+  document.getElementById('totalSavings').innerText=formatCOP(s);
+  document.getElementById('remaining').innerText=formatCOP(salary-(f+v+s));
+}
+</script>
+</body>
+</html>
