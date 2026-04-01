@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis herramientas</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #8fb4ff, #e0e0e0);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .phone {
+      width: 320px;
+      height: 600px;
+      background: #ffffff;
+      border-radius: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+
+    .apps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-decoration: none;
+      color: black;
+    }
+
+    .icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 15px;
+      background: #8fb4ff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      color: white;
+      margin-bottom: 5px;
+      transition: transform 0.2s;
+    }
+
+    .icon:hover {
+      transform: scale(1.1);
+    }
+
+    .label {
+      font-size: 12px;
+      text-align: center;
+    }
+
+    @media (max-width: 400px) {
+      .phone {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="phone">
+  <h1>Mis herramientas</h1>
+
+  <div class="apps">
+
+    <a href="simulador_credito_abonos.html" class="app">
+      <div class="icon">💳</div>
+      <div class="label">Simulador Crédito</div>
+    </a>
+
+    <a href="app_finanzas_personales_mensuales.html" class="app">
+      <div class="icon">📊</div>
+      <div class="label">Finanzas Mensuales</div>
+    </a>
+
+  </div>
+</div>
+
+</body>
+</html>
