@@ -203,34 +203,270 @@
       box-shadow: 0 1px 8px rgba(61, 110, 232, 0.25);
     }
 
-    /* Responsive */
+    .tag-pill {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 0.15rem 0.45rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: #1e3a8a;
+      margin: 0.1rem 0.2rem 0.1rem 0;
+    }
+
+    .tag-summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      margin-top: 0.5rem;
+    }
+    .tag-summary-table th, .tag-summary-table td {
+      padding: 0.45rem 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .tag-summary-table th {
+      text-align: left;
+      background: #f8f9fc;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+    .tag-summary-table .num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+    .collapsible-card { padding: 0; overflow: hidden; }
+    .collapsible-card .collapsible-trigger {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      padding: clamp(1rem, 3vw, 1.5rem);
+      margin: 0;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .collapsible-card .collapsible-trigger:hover {
+      background: #f8f9fc;
+      transform: none;
+      box-shadow: none;
+    }
+    .collapsible-card .collapsible-trigger .chev {
+      font-size: 0.65rem;
+      opacity: 0.7;
+      transition: transform 0.2s ease;
+    }
+    .collapsible-card .collapsible-trigger[aria-expanded="true"] .chev {
+      transform: rotate(180deg);
+    }
+    .collapsible-card .collapsible-inner {
+      padding: 0 clamp(1rem, 3vw, 1.5rem) clamp(1rem, 3vw, 1.5rem);
+      border-top: 1px solid var(--border);
+    }
+    .collapsible-card .collapsible-inner[hidden] { display: none !important; }
+
+    .modal-wrap {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-wrap[hidden] { display: none !important; }
+    .modal-scrim {
+      position: absolute;
+      inset: 0;
+      background: rgba(26, 31, 46, 0.45);
+      backdrop-filter: blur(2px);
+    }
+    .modal-dialog {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 520px;
+      max-height: min(90vh, 640px);
+      overflow-y: auto;
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: 0 24px 48px rgba(26, 31, 46, 0.18);
+      border: 1px solid var(--border);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 1rem 1.15rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      text-transform: none;
+    }
+    .modal-close {
+      flex-shrink: 0;
+      width: 2.25rem;
+      height: 2.25rem;
+      padding: 0;
+      border-radius: 8px;
+      font-size: 1.35rem;
+      line-height: 1;
+      background: #f0f2f7;
+      color: var(--muted);
+      box-shadow: none;
+    }
+    .modal-close:hover {
+      background: #e4e7ef;
+      color: var(--text);
+      transform: none;
+      box-shadow: none;
+    }
+    .modal-body { padding: 1rem 1.15rem; }
+    .modal-footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      padding: 1rem 1.15rem;
+      border-top: 1px solid var(--border);
+      background: #fafbfd;
+    }
+    .btn-secondary {
+      background: #eef0f5 !important;
+      color: var(--text) !important;
+      box-shadow: none !important;
+    }
+    .btn-secondary:hover {
+      background: #e2e5ed !important;
+      transform: translateY(-1px);
+    }
+    .btn-danger {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+      box-shadow: 0 2px 12px rgba(220, 38, 38, 0.35) !important;
+    }
+    .btn-danger:hover {
+      box-shadow: 0 4px 16px rgba(220, 38, 38, 0.4) !important;
+    }
+    .toolbar-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .toolbar-row input[type="search"] { flex: 1 1 200px; max-width: 420px; margin-bottom: 0 !important; }
+
+    /* Responsive: solo tabla de movimientos (no afecta tag-summary-table ni otras tablas) */
     @media (max-width: 768px) {
       .form-grid > * { flex: 1 1 100%; }
-      table, thead, tbody, th, td, tr { display: block; }
-      thead { display: none; }
-      tr {
-        margin-bottom: 15px;
+      table.movements-table,
+      table.movements-table thead,
+      table.movements-table tbody,
+      table.movements-table th,
+      table.movements-table td {
+        display: block;
+      }
+      table.movements-table thead { display: none; }
+      table.movements-table tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 0.4rem;
+        row-gap: 0.15rem;
+        margin-bottom: 0.5rem;
         background: var(--surface);
-        padding: 12px;
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
+        padding: 0.45rem 0.55rem;
+        border-radius: 10px;
+        box-shadow: 0 1px 8px rgba(26, 31, 46, 0.06);
         border: 1px solid var(--border);
       }
-      td {
-        display: flex;
-        justify-content: space-between;
+      table.movements-table td {
+        display: grid;
+        grid-template-columns: minmax(4.25rem, 44%) 1fr;
+        column-gap: 0.35rem;
+        row-gap: 0;
         align-items: center;
-        padding: 6px 0;
+        padding: 0.15rem 0;
         border: none;
+        min-width: 0;
+        font-size: 0.8rem;
       }
-      td::before { font-weight: 600; color: var(--muted); font-size: 0.75rem; }
-      td:nth-child(1)::before { content: "Nombre"; }
-      td:nth-child(2)::before { content: "Monto"; }
-      td:nth-child(3)::before { content: "Movimiento"; }
-      td:nth-child(4)::before { content: "Tipo"; }
-      td:nth-child(5)::before { content: "Concepto"; }
-      td:nth-child(6)::before { content: "Finalizado"; }
-      .actions, td:last-child { display: flex; gap: 5px; justify-content: flex-end; }
+      table.movements-table td:nth-child(1) {
+        grid-column: 1 / -1;
+      }
+      table.movements-table td:nth-child(6) {
+        grid-column: 1 / -1;
+      }
+      table.movements-table td:nth-child(7) {
+        grid-column: 1;
+        align-self: center;
+      }
+      table.movements-table td::before {
+        font-weight: 600;
+        color: var(--muted);
+        font-size: 0.62rem;
+        line-height: 1.2;
+        word-break: break-word;
+        hyphens: auto;
+      }
+      table.movements-table td:nth-child(1)::before { content: "Nombre"; }
+      table.movements-table td:nth-child(2)::before { content: "Monto"; }
+      table.movements-table td:nth-child(3)::before { content: "Movimiento"; }
+      table.movements-table td:nth-child(4)::before { content: "Tipo"; }
+      table.movements-table td:nth-child(5)::before { content: "Concepto"; }
+      table.movements-table td:nth-child(6)::before { content: "Etiquetas"; }
+      table.movements-table td:nth-child(7)::before { content: "Listo"; }
+      table.movements-table td .tag-pill {
+        font-size: 0.58rem;
+        padding: 0.06rem 0.3rem;
+        margin: 0.06rem 0.12rem 0.06rem 0;
+      }
+      table.movements-table td.actions::before {
+        display: none;
+        content: none !important;
+      }
+      table.movements-table td.actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        justify-content: flex-end;
+        align-items: center;
+        grid-column: 2;
+        justify-self: end;
+        padding: 0.1rem 0 0;
+      }
+      table.movements-table .actions button {
+        padding: 0.28rem 0.5rem;
+        font-size: 0.72rem;
+      }
+      .tag-summary-table {
+        display: table;
+        width: 100%;
+        font-size: 0.78rem;
+      }
+      .tag-summary-table thead { display: table-header-group; }
+      .tag-summary-table tbody { display: table-row-group; }
+      .tag-summary-table tr { display: table-row; }
+      .tag-summary-table th,
+      .tag-summary-table td {
+        display: table-cell;
+      }
     }
   </style>
 </head>
@@ -269,25 +505,30 @@
     </div>
   </div>
 
-  <div class="card">
-    <h3>Copia de seguridad (localStorage)</h3>
-    <p>
-      Exporta o importa todos los meses guardados en este navegador (<code>finanzas-año-mes</code>). No hace falta servidor.
-    </p>
-    <div class="form-grid">
-      <div>
-        <label>Al importar</label>
-        <select id="importMode">
-          <option value="merge">Fusionar (solo actualiza meses del archivo)</option>
-          <option value="replace">Reemplazar (borra todos los datos de finanzas y carga el archivo)</option>
-        </select>
-      </div>
-      <div>
-        <button type="button" onclick="exportFinanzasBackup()">Exportar JSON</button>
-      </div>
-      <div>
-        <input type="file" id="importFile" accept=".json,application/json" style="display:none" />
-        <button type="button" onclick="document.getElementById('importFile').click()">Importar JSON…</button>
+  <div class="card collapsible-card">
+    <button type="button" class="collapsible-trigger" id="backupToggle" aria-expanded="false" aria-controls="backupBody">
+      <span>Copia de seguridad (localStorage)</span>
+      <span class="chev" aria-hidden="true">▼</span>
+    </button>
+    <div class="collapsible-inner" id="backupBody" hidden>
+      <p>
+        Exporta o importa todos los meses guardados en este navegador (<code>finanzas-año-mes</code>). No hace falta servidor.
+      </p>
+      <div class="form-grid">
+        <div>
+          <label>Al importar</label>
+          <select id="importMode">
+            <option value="merge">Fusionar (solo actualiza meses del archivo)</option>
+            <option value="replace">Reemplazar (borra todos los datos de finanzas y carga el archivo)</option>
+          </select>
+        </div>
+        <div>
+          <button type="button" onclick="exportFinanzasBackup()">Exportar JSON</button>
+        </div>
+        <div>
+          <input type="file" id="importFile" accept=".json,application/json" style="display:none" />
+          <button type="button" onclick="document.getElementById('importFile').click()">Importar JSON…</button>
+        </div>
       </div>
     </div>
   </div>
@@ -297,48 +538,115 @@
     <input id="salary" type="text" placeholder="$0" />
   </div>
 
-  <div class="card">
-    <h3>Agregar movimiento</h3>
-    <div class="form-grid">
-      <input id="name" placeholder="Nombre" />
-      <input id="amount" placeholder="$0" />
-      <select id="movement">
-        <option value="expense">Gasto</option>
-        <option value="income">Ingreso</option>
-      </select>
-      <select id="type">
-        <option value="fixed">Fijo</option>
-        <option value="variable">Variable</option>
-        <option value="saving">Ahorro</option>
-      </select>
-      <select id="concept">
-        <option value="salary">Desde salario (efectivo del mes)</option>
-        <option value="saving">Desde ahorro acumulado</option>
-      </select>
-      <button onclick="addExpense()">Agregar</button>
-    </div>
-  </div>
-
   <div class="grid">
     <div class="card summary-card"><h3>Gastos Fijos</h3><div id="totalFixed"></div></div>
     <div class="card summary-card"><h3>Gastos Variables</h3><div id="totalVariable"></div></div>
-    <div class="card summary-card"><h3>Ahorros</h3><div id="totalSavings"></div></div>
+    <div class="card summary-card"><h3>Ahorros este mes</h3><div id="totalSavings"></div></div>
     <div class="card summary-card"><h3>Otros ingresos (registrados)</h3><div id="otherIncomes"></div></div>
     <div class="card summary-card"><h3>Salario + ingresos finalizados</h3><div id="adjustedSalary"></div></div>
     <div class="card summary-card"><h3>Ahorro general</h3><div id="totalGeneralSavings"></div></div>
     <div class="card summary-card"><h3>Dinero actual</h3><div id="expectedMoneyDone"></div></div>
-    <div class="card summary-card"><h3>Dinero restante aproximado (mes)</h3><div id="remaining"></div></div>
+    <div class="card summary-card"><h3>Dinero restante aproximado (mes)</h3><div id="remaining"></div><p id="remainingHint" style="font-size:0.68rem;color:var(--muted);margin:0.35rem 0 0 0;font-weight:500;line-height:1.35;"></p></div>
   </div>
 
-  <div class="card table-container">
-    <table>
+  <div class="card">
+    <h3>Resumen por etiquetas</h3>
+    <p style="font-size: 0.82rem; color: var(--muted); margin: 0 0 0.5rem 0;">
+      Suma de movimientos del mes por etiqueta (ingresos y gastos de la tabla). Filas sin etiqueta van en «Sin etiqueta».
+    </p>
+    <div id="tagSummary"></div>
+  </div>
+
+  <div class="card">
+    <h3>Movimientos del mes</h3>
+    <div class="toolbar-row">
+      <label for="searchMovements" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Buscar</label>
+      <input id="searchMovements" type="search" placeholder="Buscar: nombre, etiqueta, tipo…" aria-label="Buscar movimientos" />
+      <button type="button" onclick="openMovementModal('add')" style="width:auto;white-space:nowrap;">+ Nuevo movimiento</button>
+    </div>
+    <div class="table-container" style="border: none;">
+    <table class="movements-table">
       <thead>
         <tr>
-          <th>Nombre</th><th>Monto</th><th>Movimiento</th><th>Tipo</th><th>Concepto</th><th>Finalizado</th><th>Acciones</th>
+          <th>Nombre</th><th>Monto</th><th>Movimiento</th><th>Tipo</th><th>Concepto</th><th>Etiquetas</th><th>Finalizado</th><th>Acciones</th>
         </tr>
       </thead>
       <tbody id="expenseTable"></tbody>
     </table>
+    </div>
+  </div>
+</div>
+
+<div id="modalMovementWrap" class="modal-wrap" hidden>
+  <div class="modal-scrim" onclick="closeMovementModal()"></div>
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalMovementTitle">
+    <div class="modal-header">
+      <h2 id="modalMovementTitle">Movimiento</h2>
+      <button type="button" class="modal-close" onclick="closeMovementModal()" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div>
+          <label for="mName">Nombre</label>
+          <input id="mName" type="text" placeholder="Nombre" autocomplete="off" />
+        </div>
+        <div>
+          <label for="mAmount">Monto</label>
+          <input id="mAmount" type="text" placeholder="$0" inputmode="numeric" />
+        </div>
+        <div>
+          <label for="mMovement">Movimiento</label>
+          <select id="mMovement">
+            <option value="expense">Gasto</option>
+            <option value="income">Ingreso</option>
+          </select>
+        </div>
+        <div>
+          <label for="mType">Tipo</label>
+          <select id="mType">
+            <option value="fixed">Fijo</option>
+            <option value="variable">Variable</option>
+            <option value="saving">Ahorro</option>
+          </select>
+        </div>
+        <div>
+          <label for="mConcept">Concepto</label>
+          <select id="mConcept">
+            <option value="salary">Desde salario (efectivo del mes)</option>
+            <option value="saving">Desde ahorro acumulado</option>
+          </select>
+        </div>
+        <div style="flex: 1 1 100%;">
+          <label for="mTags">Etiquetas</label>
+          <input id="mTags" type="text" placeholder="coma: casa, trabajo" autocomplete="off" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" onclick="closeMovementModal()">Cancelar</button>
+      <button type="button" onclick="submitMovementModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalDeleteWrap" class="modal-wrap" hidden>
+  <div class="modal-scrim" onclick="closeDeleteModal()"></div>
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalDeleteTitle">
+    <div class="modal-header">
+      <h2 id="modalDeleteTitle">Eliminar movimiento</h2>
+      <button type="button" class="modal-close" onclick="closeDeleteModal()" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0;font-size:0.95rem;line-height:1.5;color:var(--text);">
+        ¿Seguro que quieres eliminar <strong id="deleteConfirmName"></strong>
+        (<span id="deleteConfirmAmount"></span>)?
+      </p>
+      <p style="margin:0.75rem 0 0;font-size:0.82rem;color:var(--muted);">Esta acción no se puede deshacer.</p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" onclick="closeDeleteModal()">Cancelar</button>
+      <button type="button" class="btn-danger" onclick="confirmDeleteExpense()">Eliminar</button>
+    </div>
   </div>
 </div>
 
@@ -356,6 +664,116 @@ const translations = {
 }
 
 const STORAGE_PREFIX = 'finanzas-';
+
+function parseTags(str) {
+  if (str == null || String(str).trim() === '') return [];
+  return String(str).split(/[,;]+/).map(t => t.trim()).filter(Boolean);
+}
+
+function getTagsArray(e) {
+  if (!e || !e.tags) return [];
+  if (Array.isArray(e.tags)) return e.tags.map(t => String(t).trim()).filter(Boolean);
+  return parseTags(e.tags);
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+let movementModalEditIndex = null;
+let pendingDeleteIndex = null;
+
+function clearMovementModalForm() {
+  document.getElementById('mName').value = '';
+  document.getElementById('mAmount').value = '';
+  document.getElementById('mTags').value = '';
+  document.getElementById('mMovement').value = 'expense';
+  document.getElementById('mType').value = 'fixed';
+  document.getElementById('mConcept').value = 'salary';
+}
+
+function openMovementModal(mode, index) {
+  movementModalEditIndex = mode === 'edit' && typeof index === 'number' ? index : null;
+  const title = document.getElementById('modalMovementTitle');
+  if (movementModalEditIndex !== null) {
+    title.textContent = 'Editar movimiento';
+    const e = expenses[movementModalEditIndex];
+    document.getElementById('mName').value = e.name;
+    document.getElementById('mAmount').value = formatCOP(Number(e.amount) || 0);
+    document.getElementById('mMovement').value = e.movement || 'expense';
+    document.getElementById('mType').value = e.type;
+    document.getElementById('mConcept').value = e.concept != null ? e.concept : 'salary';
+    document.getElementById('mTags').value = getTagsArray(e).join(', ');
+  } else {
+    title.textContent = 'Agregar movimiento';
+    clearMovementModalForm();
+  }
+  document.getElementById('modalMovementWrap').removeAttribute('hidden');
+  document.getElementById('mName').focus();
+}
+
+function closeMovementModal() {
+  document.getElementById('modalMovementWrap').setAttribute('hidden', '');
+  movementModalEditIndex = null;
+}
+
+function submitMovementModal() {
+  const name = document.getElementById('mName').value.trim();
+  const amount = clean(document.getElementById('mAmount').value);
+  const movement = document.getElementById('mMovement').value;
+  const type = document.getElementById('mType').value;
+  const concept = document.getElementById('mConcept').value;
+  const tags = parseTags(document.getElementById('mTags').value);
+  if (!name || !amount) return;
+  if (movementModalEditIndex !== null) {
+    Object.assign(expenses[movementModalEditIndex], { name, amount, movement, type, concept, tags });
+  } else {
+    expenses.push({ name, amount, movement, type, concept, tags, done: false });
+  }
+  saveData();
+  clearMovementModalForm();
+  closeMovementModal();
+  render();
+}
+
+function openDeleteConfirmModal(i) {
+  pendingDeleteIndex = i;
+  document.getElementById('deleteConfirmName').textContent = expenses[i].name;
+  document.getElementById('deleteConfirmAmount').textContent = formatCOP(expenses[i].amount);
+  document.getElementById('modalDeleteWrap').removeAttribute('hidden');
+}
+
+function closeDeleteModal() {
+  document.getElementById('modalDeleteWrap').setAttribute('hidden', '');
+  pendingDeleteIndex = null;
+}
+
+function confirmDeleteExpense() {
+  if (pendingDeleteIndex !== null && expenses[pendingDeleteIndex]) {
+    expenses.splice(pendingDeleteIndex, 1);
+    saveData();
+    render();
+  }
+  closeDeleteModal();
+}
+
+function matchesSearchQuery(e, q) {
+  if (!q) return true;
+  const concept = e.concept != null ? e.concept : 'salary';
+  const movement = e.movement || 'expense';
+  const hay = [
+    e.name,
+    getTagsArray(e).join(' '),
+    translations[movement] || movement,
+    translations[e.type] || e.type,
+    translations[concept] || concept,
+  ].join(' ').toLowerCase();
+  return q.split(/\s+/).filter(Boolean).every(part => hay.includes(part));
+}
 
 let expenses = [];
 let salary = 0;
@@ -401,7 +819,30 @@ function saveData(){
   localStorage.setItem(currentKey, JSON.stringify({ expenses, salary }));
 }
 
-document.getElementById("amount").addEventListener("input", e => e.target.value = formatCOP(clean(e.target.value)));
+document.getElementById("mAmount").addEventListener("input", e => {
+  e.target.value = formatCOP(clean(e.target.value));
+});
+
+document.getElementById("backupToggle").addEventListener("click", () => {
+  const body = document.getElementById("backupBody");
+  const btn = document.getElementById("backupToggle");
+  const isHidden = body.hasAttribute("hidden");
+  if (isHidden) {
+    body.removeAttribute("hidden");
+    btn.setAttribute("aria-expanded", "true");
+  } else {
+    body.setAttribute("hidden", "");
+    btn.setAttribute("aria-expanded", "false");
+  }
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  const move = document.getElementById("modalMovementWrap");
+  const del = document.getElementById("modalDeleteWrap");
+  if (!move.hasAttribute("hidden")) closeMovementModal();
+  else if (!del.hasAttribute("hidden")) closeDeleteModal();
+});
 
 document.getElementById("salary").addEventListener("input", e => {
   salary = clean(e.target.value);
@@ -409,6 +850,8 @@ document.getElementById("salary").addEventListener("input", e => {
   saveData();
   render();
 });
+
+document.getElementById("searchMovements").addEventListener("input", () => render());
 
 document.getElementById("importFile").addEventListener("change", e => {
   const file = e.target.files && e.target.files[0];
@@ -503,46 +946,8 @@ function importFinanzasBackupText(text, mode){
   return count;
 }
 
-function addExpense(){
-  const name = document.getElementById("name").value;
-  const amount = clean(document.getElementById("amount").value);
-  const movement = document.getElementById("movement").value;
-  const type = document.getElementById("type").value;
-  const concept = document.getElementById("concept").value;
-
-  if(!name || !amount) return;
-
-  expenses.push({ name, amount, movement, type, concept, done:false });
-  saveData();
-  render();
-}
-
-function editExpense(index) {
-  const newName = prompt("Nuevo nombre", expenses[index].name);
-  const newAmountRaw = prompt("Nuevo monto", expenses[index].amount);
-  const newMovement = prompt("Movimiento (expense, income)", expenses[index].movement || 'expense');
-  const newType = prompt("Tipo (fixed, variable, saving)", expenses[index].type);
-  const newConcept = prompt("Concepto (salary, saving)", expenses[index].concept);
-
-  if (newName && newAmountRaw) {
-    expenses[index].name = newName;
-    expenses[index].amount = parseFloat(newAmountRaw);
-    if (newMovement) expenses[index].movement = newMovement;
-    if (newType) expenses[index].type = newType;
-    if (newConcept) expenses[index].concept = newConcept;
-    saveData();
-    render();
-  }
-}
-
 function toggleDone(i){
   expenses[i].done = !expenses[i].done;
-  saveData();
-  render();
-}
-
-function deleteExpense(i){
-  expenses.splice(i,1);
   saveData();
   render();
 }
@@ -585,17 +990,30 @@ function getGeneralSavings(){
 
 function render(){
   let f=0,v=0,s=0,sAlloc=0,sWithdraw=0,fRem=0,vRem=0, doneFromSalary=0, otherIncomesTotal=0, doneIncomes=0;
-  const table = document.getElementById('expenseTable');
-  table.innerHTML='';
+  let sumIncomeRows = 0, sumExpenseRows = 0;
+  const tagBuckets = {};
+  const NONE_KEY = '__sin_etiqueta__';
 
-  expenses.forEach((e,i)=>{
+  function bumpTag(label, amount, isIncome) {
+    const key = label.trim().toLowerCase();
+    if (!tagBuckets[key]) tagBuckets[key] = { label: label.trim(), income: 0, expense: 0 };
+    if (isIncome) tagBuckets[key].income += amount;
+    else tagBuckets[key].expense += amount;
+  }
+
+  const searchQ = (document.getElementById('searchMovements') && document.getElementById('searchMovements').value || '').trim().toLowerCase();
+
+  expenses.forEach((e)=>{
     const movement = e.movement || 'expense';
     const concept = e.concept != null ? e.concept : 'salary';
+    const amt = Number(e.amount) || 0;
 
     if(movement === 'income'){
+      sumIncomeRows += amt;
       otherIncomesTotal += e.amount;
       if(e.done) doneIncomes += e.amount;
     } else {
+      sumExpenseRows += amt;
       if(e.type==='fixed'){ f+=e.amount; if(concept==='salary' && e.done) fRem+=e.amount; }
       if(e.type==='variable'){ v+=e.amount; if(concept==='salary' && e.done) vRem+=e.amount; }
       if(e.type==='saving'){
@@ -606,26 +1024,69 @@ function render(){
       if(e.done && concept==='salary')doneFromSalary+=e.amount;
     }
 
+    const tags = getTagsArray(e);
+    if (tags.length === 0) {
+      bumpTag(NONE_KEY, amt, movement === 'income');
+      tagBuckets[NONE_KEY].label = 'Sin etiqueta';
+    } else {
+      tags.forEach(t => bumpTag(t, amt, movement === 'income'));
+    }
+  });
+
+  const adjustedSalary = salary + doneIncomes;
+  const remainingApprox = (Number(salary) || 0) + sumIncomeRows - sumExpenseRows;
+
+  const tagRows = Object.keys(tagBuckets)
+    .map(k => ({ key: k, ...tagBuckets[k], net: tagBuckets[k].income - tagBuckets[k].expense }))
+    .sort((a, b) => {
+      if (a.key === NONE_KEY) return 1;
+      if (b.key === NONE_KEY) return -1;
+      return a.label.localeCompare(b.label, 'es');
+    });
+  const tagSummaryEl = document.getElementById('tagSummary');
+  if (tagRows.length === 0) {
+    tagSummaryEl.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;margin:0;">No hay movimientos este mes.</p>';
+  } else {
+    tagSummaryEl.innerHTML = `
+      <table class="tag-summary-table">
+        <thead><tr><th>Etiqueta</th><th class="num">Ingresos</th><th class="num">Gastos</th><th class="num">Neto</th></tr></thead>
+        <tbody>
+          ${tagRows.map(r => `<tr>
+            <td>${escapeHtml(r.label)}</td>
+            <td class="num">${formatCOP(r.income)}</td>
+            <td class="num">${formatCOP(r.expense)}</td>
+            <td class="num">${formatCOP(r.net)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  const table = document.getElementById('expenseTable');
+  table.innerHTML='';
+
+  expenses.forEach((e,i)=>{
+    if (!matchesSearchQuery(e, searchQ)) return;
+
+    const movement = e.movement || 'expense';
+    const concept = e.concept != null ? e.concept : 'salary';
+    const tagsHtml = getTagsArray(e).map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('') || '—';
+
     table.innerHTML+=`
       <tr class="${e.done?'done':''}">
-        <td>${e.name}</td>
+        <td>${escapeHtml(e.name)}</td>
         <td>${formatCOP(e.amount)}</td>
         <td>${translations[movement]}</td>
         <td>${translations[e.type]}</td>
         <td>${translations[concept]}</td>
+        <td>${tagsHtml}</td>
         <td><input type="checkbox" ${e.done?'checked':''} onclick="toggleDone(${i})"></td>
         <td class="actions">
-          <button onclick="editExpense(${i})">Editar</button>
-          <button onclick="deleteExpense(${i})">Eliminar</button>
+          <button type="button" onclick="openMovementModal('edit', ${i})">Editar</button>
+          <button type="button" onclick="openDeleteConfirmModal(${i})">Eliminar</button>
         </td>
       </tr>`;
   });
 
-  // Solo los ingresos finalizados entran al salario ajustado y al restante del mes
-  const adjustedSalary = salary + doneIncomes;
-  // Restante: solo descuenta filas finalizadas (done): fijos/variables desde salario y ahorro a destinar desde salario.
-  // Retiros desde ahorro no entran en fRem/vRem/sAlloc (solo aplican al ahorro general al finalizar).
-  const remainingCash = adjustedSalary - (fRem + vRem + sAlloc);
   document.getElementById('totalFixed').innerText=formatCOP(f);
   document.getElementById('totalVariable').innerText=formatCOP(v);
   document.getElementById('totalSavings').innerText=
@@ -634,7 +1095,11 @@ function render(){
   document.getElementById('adjustedSalary').innerText=formatCOP(adjustedSalary);
   document.getElementById('totalGeneralSavings').innerText=formatCOP(getGeneralSavings());
   document.getElementById('expectedMoneyDone').innerText=formatCOP((salary + doneIncomes)-doneFromSalary);
-  document.getElementById('remaining').innerText=formatCOP(remainingCash);
+  document.getElementById('remaining').innerText=formatCOP(remainingApprox);
+  const hint = document.getElementById('remainingHint');
+  if (hint) {
+    hint.textContent = `Salario del mes + suma ingresos en tabla (${formatCOP(sumIncomeRows)}) − suma gastos en tabla (${formatCOP(sumExpenseRows)}). No usa «Finalizado».`;
+  }
 }
 </script>
 </body>
