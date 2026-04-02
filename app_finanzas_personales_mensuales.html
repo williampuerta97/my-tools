@@ -1050,13 +1050,11 @@ function render(){
   } else {
     tagSummaryEl.innerHTML = `
       <table class="tag-summary-table">
-        <thead><tr><th>Etiqueta</th><th class="num">Ingresos</th><th class="num">Gastos</th><th class="num">Neto</th></tr></thead>
+        <thead><tr><th>Etiqueta</th><th class="num">Gastos</th></tr></thead>
         <tbody>
           ${tagRows.map(r => `<tr>
             <td>${escapeHtml(r.label)}</td>
-            <td class="num">${formatCOP(r.income)}</td>
             <td class="num">${formatCOP(r.expense)}</td>
-            <td class="num">${formatCOP(r.net)}</td>
           </tr>`).join('')}
         </tbody>
       </table>`;
