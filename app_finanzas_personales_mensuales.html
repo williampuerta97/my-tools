@@ -541,6 +541,7 @@
   <div class="grid">
     <div class="card summary-card"><h3>Gastos Fijos</h3><div id="totalFixed"></div></div>
     <div class="card summary-card"><h3>Gastos Variables</h3><div id="totalVariable"></div></div>
+    <div class="card summary-card"><h3>Gastos Totales</h3><div id="totalExpenses"></div></div>
     <div class="card summary-card"><h3>Ahorros este mes</h3><div id="totalSavings"></div></div>
     <div class="card summary-card"><h3>Otros ingresos (registrados)</h3><div id="otherIncomes"></div></div>
     <div class="card summary-card"><h3>Salario + ingresos finalizados</h3><div id="adjustedSalary"></div></div>
@@ -1089,6 +1090,7 @@ function render(){
 
   document.getElementById('totalFixed').innerText=formatCOP(f);
   document.getElementById('totalVariable').innerText=formatCOP(v);
+  document.getElementById('totalExpenses').innerText=formatCOP(f+v);
   document.getElementById('totalSavings').innerText=
     sWithdraw ? `${formatCOP(sAlloc)} · Retiros: ${formatCOP(sWithdraw)}` : formatCOP(sAlloc);
   document.getElementById('otherIncomes').innerText=formatCOP(otherIncomesTotal);

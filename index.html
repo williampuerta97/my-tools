@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#8fb4ff">
+  <link rel="icon" href="./icon-192.png">
   <title>Mis herramientas</title>
   <style>
     body {
@@ -97,6 +100,21 @@
 
   </div>
 </div>
-
+<script>
+  if ('serviceWorker' in navigator) {
+    console.log('SW soportado');
+  
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => {
+        console.log('SW REGISTRADO:', reg.scope);
+      })
+      .catch(err => {
+        console.error('ERROR SW:', err);
+      });
+  
+  } else {
+    console.log('SW NO soportado');
+  }
+  </script>
 </body>
 </html>
