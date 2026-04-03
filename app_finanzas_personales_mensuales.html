@@ -431,7 +431,13 @@
       table.movements-table td:nth-child(4)::before { content: "Tipo"; }
       table.movements-table td:nth-child(5)::before { content: "Concepto"; }
       table.movements-table td:nth-child(6)::before { content: "Etiquetas"; }
-      table.movements-table td:nth-child(7)::before { content: "Listo"; }
+      table.movements-table td:nth-child(7)::before { content: "Creado"; }
+      table.movements-table td:nth-child(8)::before { content: "Actualizado"; }
+      table.movements-table td:nth-child(9)::before { content: "Finalizado el"; }
+      table.movements-table td:nth-child(10)::before { content: "Listo"; }
+      table.movements-table td:nth-child(11) {
+        grid-column: 2;
+      }
       table.movements-table td .tag-pill {
         font-size: 0.58rem;
         padding: 0.06rem 0.3rem;
@@ -569,7 +575,7 @@
     <table class="movements-table">
       <thead>
         <tr>
-          <th>Nombre</th><th>Monto</th><th>Movimiento</th><th>Tipo</th><th>Concepto</th><th>Etiquetas</th><th>Finalizado</th><th>Acciones</th>
+          <th>Nombre</th><th>Monto</th><th>Movimiento</th><th>Tipo</th><th>Concepto</th><th>Etiquetas</th><th>Creado</th><th>Actualizado</th><th>Fecha fin</th><th>Finalizado</th><th>Acciones</th>
         </tr>
       </thead>
       <tbody id="expenseTable"></tbody>
@@ -652,6 +658,50 @@
 </div>
 
 <script>
+const formatDate = ts => {
+  if (!ts) return '—';
+
+  const d = new Date(ts);
+
+  // 🔒 Fuerza timezone de Colombia
+  return new Intl.DateTimeFormat('es-CO', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(d);
+};
+
+function getMonthStartTimestamp() {
+  const y = Number(document.getElementById('year').value);
+  const m = Number(document.getElementById('month').value) - 1;
+  return new Date(y, m, 1).getTime();
+}
+
+function timeAgo(ts) {
+  if (!ts) return '';
+
+  const now = new Date();
+  const d = new Date(ts);
+
+  // Normalizar a solo fecha (sin hora)
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  const diffDays = Math.round((today - target) / 86400000);
+
+  if (diffDays === 0) return 'hoy';
+  if (diffDays === 1) return 'ayer';
+  if (diffDays > 1) return `hace ${diffDays} días`;
+
+  return 'futuro';
+}
+
+const formatCompletedDate = ts => {
+  if (!ts) return '—';
+  return formatDate(ts);
+};
+
 const formatCOP = v => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0}).format(v);
 const clean = v => parseFloat(v.replace(/\D/g,'')) || 0;
 const translations = {
@@ -729,11 +779,20 @@ function submitMovementModal() {
   const type = document.getElementById('mType').value;
   const concept = document.getElementById('mConcept').value;
   const tags = parseTags(document.getElementById('mTags').value);
+  const now = Date.now();
   if (!name || !amount) return;
   if (movementModalEditIndex !== null) {
-    Object.assign(expenses[movementModalEditIndex], { name, amount, movement, type, concept, tags });
+    Object.assign(expenses[movementModalEditIndex], {
+      name, amount, movement, type, concept, tags,
+      updatedAt: now
+    });
   } else {
-    expenses.push({ name, amount, movement, type, concept, tags, done: false });
+    expenses.push({
+      name, amount, movement, type, concept, tags,
+      done: false,
+      createdAt: now,
+      updatedAt: now
+    });
   }
   saveData();
   clearMovementModalForm();
@@ -789,6 +848,7 @@ function getKey(){
 function loadData(){
   currentKey = getKey();
   const dataRaw = localStorage.getItem(currentKey);
+  const baseTs = getMonthStartTimestamp();
 
   if(!dataRaw){
     // default data
@@ -803,13 +863,25 @@ function loadData(){
       { name: "Recibos Mamá", amount: 120000, type: "fixed", concept: "salary", done:false },
       { name: "Alimento Gatas", amount: 75000, type: "fixed", concept: "salary", done:false },
       { name: "Alimento Perras", amount: 130000, type: "fixed", concept: "salary", done:false }
-    ];
+    ].map(e => ({
+      ...e,
+      createdAt: baseTs,
+      updatedAt: baseTs
+    }));
     salary = 4000000;
     saveData();
   } else {
     const data = JSON.parse(dataRaw);
     expenses = data.expenses || [];
     salary = data.salary || 4000000;
+
+    const fallbackTs = getMonthStartTimestamp();
+
+    expenses = expenses.map(e => ({
+      ...e,
+      createdAt: e.createdAt || fallbackTs,
+      updatedAt: e.updatedAt || e.createdAt || fallbackTs
+    }));
   }
 
   document.getElementById('salary').value = formatCOP(salary);
@@ -948,7 +1020,17 @@ function importFinanzasBackupText(text, mode){
 }
 
 function toggleDone(i){
+  const now = Date.now();
   expenses[i].done = !expenses[i].done;
+
+  if (expenses[i].done) {
+    // ✅ crear fecha de finalización
+    expenses[i].completedAt = now;
+  } else {
+    // ❌ eliminar si se desmarca
+    delete expenses[i].completedAt;
+  }
+
   saveData();
   render();
 }
@@ -1078,6 +1160,9 @@ function render(){
         <td>${translations[e.type]}</td>
         <td>${translations[concept]}</td>
         <td>${tagsHtml}</td>
+        <td>${formatDate(e.createdAt)}<br><small>${timeAgo(e.createdAt)}</small></td>
+        <td>${formatDate(e.updatedAt)}<br><small>${timeAgo(e.updatedAt)}</small></td>
+        <td>${formatCompletedDate(e.completedAt)}<br><small>${timeAgo(e.completedAt)}</small></td>
         <td><input type="checkbox" ${e.done?'checked':''} onclick="toggleDone(${i})"></td>
         <td class="actions">
           <button type="button" onclick="openMovementModal('edit', ${i})">Editar</button>
