@@ -569,6 +569,13 @@
     <div class="toolbar-row">
       <label for="searchMovements" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Buscar</label>
       <input id="searchMovements" type="search" placeholder="Buscar: nombre, etiqueta, tipo…" aria-label="Buscar movimientos" />
+
+      <select id="filterDone" style="width:auto;">
+        <option value="all">Todos</option>
+        <option value="done">Solo finalizados</option>
+        <option value="pending" selected>Solo pendientes</option>
+      </select>
+
       <button type="button" onclick="openMovementModal('add')" style="width:auto;white-space:nowrap;">+ Nuevo movimiento</button>
     </div>
     <div class="table-container" style="border: none;">
@@ -1085,6 +1092,7 @@ function render(){
   }
 
   const searchQ = (document.getElementById('searchMovements') && document.getElementById('searchMovements').value || '').trim().toLowerCase();
+  const filter = document.getElementById("filterDone").value;
 
   expenses.forEach((e)=>{
     const movement = e.movement || 'expense';
@@ -1148,6 +1156,9 @@ function render(){
   expenses.forEach((e,i)=>{
     if (!matchesSearchQuery(e, searchQ)) return;
 
+    if (filter === "done" && !e.done) return;
+    if (filter === "pending" && e.done) return;
+
     const movement = e.movement || 'expense';
     const concept = e.concept != null ? e.concept : 'salary';
     const tagsHtml = getTagsArray(e).map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('') || '—';
@@ -1185,6 +1196,7 @@ function render(){
   if (hint) {
     hint.textContent = `Salario del mes + suma ingresos en tabla (${formatCOP(sumIncomeRows)}) − suma gastos en tabla (${formatCOP(sumExpenseRows)}). No usa «Finalizado».`;
   }
+  document.getElementById("filterDone").addEventListener("change", () => render());
 }
 </script>
 </body>
