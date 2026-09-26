@@ -373,6 +373,51 @@
     }
     .toolbar-row input[type="search"] { flex: 1 1 200px; max-width: 420px; margin-bottom: 0 !important; }
 
+    .modal-dialog.modal-wide { max-width: min(1040px, 96vw); }
+    .credit-list { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.85rem; }
+    .credit-item {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.65rem 0.75rem;
+      padding: 0.65rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fafbfd;
+    }
+    .credit-item strong { font-size: 0.92rem; }
+    .credit-item .owed { font-size: 0.95rem; font-weight: 700; margin-top: 0.25rem; }
+    .credit-item .meta { font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem; }
+    .card-move {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.45rem 0.75rem;
+      margin-top: 0.45rem;
+      padding-top: 0.45rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.82rem;
+    }
+    .card-move-form { margin-top: 0.65rem; }
+    .moves-toggle {
+      width: auto !important;
+      margin: 0.35rem 0 0;
+      padding: 0.15rem 0 !important;
+      background: transparent !important;
+      color: var(--accent) !important;
+      box-shadow: none !important;
+      font-size: 0.78rem;
+    }
+    .moves-toggle:hover { background: transparent !important; box-shadow: none !important; transform: none; }
+    [data-card-moves][hidden] { display: none !important; }
+    .abono-block { flex: 1 1 100%; margin-top: 0.65rem; padding-top: 0.55rem; border-top: 1px dashed var(--border); }
+    .abono-block .meta button { width: auto; margin-left: 0.35rem; padding: 0.15rem 0.45rem; font-size: 0.72rem; }
+    .credit-empty { margin: 0.85rem 0 0; font-size: 0.85rem; color: var(--muted); }
+    .tag-pill.tag-muted { background: #f0f2f7; color: var(--muted); }
+    .tag-pill.tag-ok { background: #e7f7f1; color: #0d7a56; }
+
     /* Responsive: solo tabla de movimientos (no afecta tag-summary-table ni otras tablas) */
     @media (max-width: 768px) {
       .form-grid > * { flex: 1 1 100%; }
@@ -508,6 +553,12 @@
       <div>
         <button onclick="loadData()">Cargar</button>
       </div>
+      <div>
+        <button type="button" class="btn-secondary" id="openCreditsBtn" onclick="openCreditsModal()">Créditos activos</button>
+      </div>
+      <div>
+        <button type="button" class="btn-secondary" id="openCardsBtn" onclick="openCardsModal()">Tarjetas</button>
+      </div>
     </div>
   </div>
 
@@ -518,7 +569,7 @@
     </button>
     <div class="collapsible-inner" id="backupBody" hidden>
       <p>
-        Exporta o importa todos los meses guardados en este navegador (<code>finanzas-año-mes</code>). No hace falta servidor.
+        Exporta o importa todos los meses y los créditos activos guardados en este navegador (<code>finanzas-año-mes</code>). No hace falta servidor.
       </p>
       <div class="form-grid">
         <div>
@@ -576,6 +627,8 @@
         <option value="pending" selected>Solo pendientes</option>
       </select>
 
+      <button type="button" class="btn-secondary" onclick="setAllDone(true)" style="width:auto;white-space:nowrap;">Finalizar todos</button>
+      <button type="button" class="btn-secondary" onclick="setAllDone(false)" style="width:auto;white-space:nowrap;">Desmarcar todos</button>
       <button type="button" onclick="openMovementModal('add')" style="width:auto;white-space:nowrap;">+ Nuevo movimiento</button>
     </div>
     <div class="table-container" style="border: none;">
@@ -587,6 +640,86 @@
       </thead>
       <tbody id="expenseTable"></tbody>
     </table>
+    </div>
+  </div>
+</div>
+
+<div id="modalCreditsWrap" class="modal-wrap" hidden>
+  <div class="modal-scrim" onclick="closeCreditsModal()"></div>
+  <div class="modal-dialog modal-wide" role="dialog" aria-modal="true" aria-labelledby="modalCreditsTitle">
+    <div class="modal-header">
+      <h2 id="modalCreditsTitle">Créditos activos</h2>
+      <button type="button" class="modal-close" onclick="closeCreditsModal()" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="creditsHint" style="margin:0 0 0.85rem;font-size:0.82rem;color:var(--muted);">
+        La cuota entra cada mes como gasto fijo del salario. Lo pagado sale de las cuotas marcadas como finalizadas.
+      </p>
+      <div class="form-grid">
+        <div>
+          <label for="cName">Nombre</label>
+          <input id="cName" type="text" placeholder="Ej. Crédito libre" autocomplete="off" />
+        </div>
+        <div>
+          <label for="cAmount">Cuota mensual</label>
+          <input id="cAmount" type="text" placeholder="$0" inputmode="numeric" />
+        </div>
+        <div>
+          <label for="cStartMonth">Desde el mes</label>
+          <select id="cStartMonth">
+            <option value="1">Enero</option>
+            <option value="2">Febrero</option>
+            <option value="3">Marzo</option>
+            <option value="4">Abril</option>
+            <option value="5">Mayo</option>
+            <option value="6">Junio</option>
+            <option value="7">Julio</option>
+            <option value="8">Agosto</option>
+            <option value="9">Septiembre</option>
+            <option value="10">Octubre</option>
+            <option value="11">Noviembre</option>
+            <option value="12">Diciembre</option>
+          </select>
+        </div>
+        <div>
+          <label for="cStartYear">Año</label>
+          <input id="cStartYear" type="number" />
+        </div>
+        <div>
+          <label for="cInstallments">Número de cuotas</label>
+          <input id="cInstallments" type="number" min="1" placeholder="Ej. 24" />
+        </div>
+      </div>
+      <div class="actions" style="margin-top:0.75rem;">
+        <button type="button" id="creditSubmitBtn" onclick="submitCreditForm()" style="width:auto;">Agregar crédito</button>
+        <button type="button" id="creditCancelEditBtn" class="btn-secondary" onclick="resetCreditForm()" hidden style="width:auto;">Cancelar edición</button>
+      </div>
+      <div id="creditsList" class="credit-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="modalCardsWrap" class="modal-wrap" hidden>
+  <div class="modal-scrim" onclick="closeCardsModal()"></div>
+  <div class="modal-dialog modal-wide" role="dialog" aria-modal="true" aria-labelledby="modalCardsTitle">
+    <div class="modal-header">
+      <h2 id="modalCardsTitle">Tarjetas de crédito</h2>
+      <button type="button" class="modal-close" onclick="closeCardsModal()" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="cardsHint" style="margin:0 0 0.85rem;font-size:0.82rem;color:var(--muted);">
+        Cada compra puede cobrarse cada mes, como Netflix, o a un número fijo de cuotas que se registra una vez y va bajando.
+      </p>
+      <div class="form-grid">
+        <div style="flex: 1 1 220px;">
+          <label for="cardName">Tarjeta</label>
+          <input id="cardName" type="text" placeholder="Ej. T.C Visa" autocomplete="off" />
+        </div>
+        <div>
+          <button type="button" onclick="submitCard()" style="width:auto;">Agregar tarjeta</button>
+        </div>
+      </div>
+      <div id="cardsList" class="credit-list"></div>
     </div>
   </div>
 </div>
@@ -655,6 +788,7 @@
         ¿Seguro que quieres eliminar <strong id="deleteConfirmName"></strong>
         (<span id="deleteConfirmAmount"></span>)?
       </p>
+      <p id="deleteConfirmExtra" hidden style="margin:0.75rem 0 0;font-size:0.82rem;color:var(--muted);"></p>
       <p style="margin:0.75rem 0 0;font-size:0.82rem;color:var(--muted);">Esta acción no se puede deshacer.</p>
     </div>
     <div class="modal-footer">
@@ -722,6 +856,9 @@ const translations = {
 }
 
 const STORAGE_PREFIX = 'finanzas-';
+const CREDITS_KEY = 'finanzas-creditos';
+const CARDS_KEY = 'finanzas-tarjetas';
+const MONTH_NAMES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 function parseTags(str) {
   if (str == null || String(str).trim() === '') return [];
@@ -744,6 +881,17 @@ function escapeHtml(s) {
 
 let movementModalEditIndex = null;
 let pendingDeleteIndex = null;
+let pendingCreditDeleteId = null;
+let pendingCardDeleteId = null;
+let pendingCardMovementDelete = null;
+let credits = [];
+let cards = [];
+let dismissedCreditIds = [];
+let dismissedCardIds = [];
+let creditModalEditId = null;
+let showInactiveCredits = false;
+let editingCardMovement = null;
+let expandedCardMoves = new Set();
 
 function clearMovementModalForm() {
   document.getElementById('mName').value = '';
@@ -808,24 +956,907 @@ function submitMovementModal() {
 }
 
 function openDeleteConfirmModal(i) {
+  pendingCreditDeleteId = null;
+  pendingCardDeleteId = null;
+  pendingCardMovementDelete = null;
   pendingDeleteIndex = i;
+  document.getElementById('modalDeleteTitle').textContent = 'Eliminar movimiento';
   document.getElementById('deleteConfirmName').textContent = expenses[i].name;
   document.getElementById('deleteConfirmAmount').textContent = formatCOP(expenses[i].amount);
+  const extra = document.getElementById('deleteConfirmExtra');
+  if (expenses[i].creditId) {
+    extra.hidden = false;
+    extra.textContent = 'Es la cuota de un crédito activo. Si la eliminas, no vuelve a este mes. Para quitarla de los demás meses, pausa el crédito.';
+  } else if (expenses[i].cardId) {
+    extra.hidden = false;
+    extra.textContent = 'Es la cuota de una tarjeta. Si la eliminas, no vuelve a este mes. Para quitarla de los demás meses, pausa la tarjeta.';
+  } else {
+    extra.hidden = true;
+    extra.textContent = '';
+  }
   document.getElementById('modalDeleteWrap').removeAttribute('hidden');
 }
 
 function closeDeleteModal() {
   document.getElementById('modalDeleteWrap').setAttribute('hidden', '');
   pendingDeleteIndex = null;
+  pendingCreditDeleteId = null;
+  pendingCardDeleteId = null;
+  pendingCardMovementDelete = null;
+  document.getElementById('modalDeleteTitle').textContent = 'Eliminar movimiento';
+  const extra = document.getElementById('deleteConfirmExtra');
+  if (extra) {
+    extra.hidden = true;
+    extra.textContent = '';
+  }
 }
 
 function confirmDeleteExpense() {
+  if (pendingCreditDeleteId) {
+    credits = credits.filter(c => c.id !== pendingCreditDeleteId);
+    saveCredits();
+    closeDeleteModal();
+    if (currentKey) {
+      syncActiveCreditExpenses();
+      render();
+    }
+    renderCreditsModal();
+    return;
+  }
+  if (pendingCardDeleteId) {
+    cards = cards.filter(c => c.id !== pendingCardDeleteId);
+    saveCards();
+    closeDeleteModal();
+    if (currentKey) {
+      syncCardExpenses();
+      render();
+    }
+    renderCardsModal();
+    return;
+  }
+  if (pendingCardMovementDelete) {
+    const card = cards.find(c => c.id === pendingCardMovementDelete.cardId);
+    if (card) card.movements = (card.movements || []).filter(mv => mv.id !== pendingCardMovementDelete.movementId);
+    saveCards();
+    closeDeleteModal();
+    if (currentKey) {
+      syncCardExpenses();
+      render();
+    }
+    renderCardsModal();
+    return;
+  }
   if (pendingDeleteIndex !== null && expenses[pendingDeleteIndex]) {
+    const removed = expenses[pendingDeleteIndex];
+    if (removed.creditId && !dismissedCreditIds.includes(removed.creditId)) {
+      dismissedCreditIds.push(removed.creditId);
+    }
+    if (removed.cardId && !dismissedCardIds.includes(removed.cardId)) {
+      dismissedCardIds.push(removed.cardId);
+    }
     expenses.splice(pendingDeleteIndex, 1);
     saveData();
     render();
   }
   closeDeleteModal();
+}
+
+function loadCredits() {
+  try {
+    const raw = localStorage.getItem(CREDITS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    credits = Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    credits = [];
+  }
+}
+
+function saveCredits() {
+  localStorage.setItem(CREDITS_KEY, JSON.stringify(credits));
+  updateCreditsButton();
+}
+
+function updateCreditsButton() {
+  const btn = document.getElementById('openCreditsBtn');
+  if (!btn) return;
+  const n = credits.filter(c => c.active !== false).length;
+  btn.textContent = n ? `Créditos activos (${n})` : 'Créditos activos';
+}
+
+function loadedPeriod() {
+  const match = /^finanzas-(\d+)-(\d+)$/.exec(currentKey || '');
+  if (!match) return null;
+  return { year: Number(match[1]), month: Number(match[2]) };
+}
+
+function periodIndex(year, month) {
+  return Number(year) * 12 + Number(month);
+}
+
+function projectDebt(spec) {
+  const cuota0 = Math.round(Number(spec.cuota) || 0);
+  const plazo0 = Math.round(Number(spec.installments) || 0);
+  const start = periodIndex(spec.startYear, spec.startMonth);
+  if (!cuota0 || !plazo0 || !start) return { schedule: [] };
+  let balance = cuota0 * plazo0;
+  let cuota = cuota0;
+  let future = plazo0;
+  const abonos = (spec.abonos || []).slice().sort((a, b) =>
+    periodIndex(a.year, a.month) - periodIndex(b.year, b.month)
+  );
+  const schedule = [];
+  while (future > 0 && balance > 0 && schedule.length < 600) {
+    const index = start + schedule.length;
+    const cuotaMes = Math.min(cuota, balance);
+    const monthAbonos = abonos.filter(a => periodIndex(a.year, a.month) === index);
+    const extra = monthAbonos.reduce((sum, a) => sum + Math.round(Number(a.amount) || 0), 0);
+    balance = Math.max(0, balance - cuotaMes - extra);
+    schedule.push({ index, cuota: cuotaMes, extra, balance });
+    future -= 1;
+    if (balance <= 0) break;
+    monthAbonos.forEach(a => {
+        if (!spec.plainAbono && a.mode === 'cuota') {
+          if (future > 0) cuota = Math.max(1, Math.round(balance / future));
+        } else if (cuota > 0) {
+          future = Math.ceil(balance / cuota);
+        }
+    });
+  }
+  return { schedule };
+}
+
+function debtSpecFromCredit(credit) {
+  return {
+    cuota: credit.amount,
+    installments: credit.installments,
+    startYear: credit.startYear,
+    startMonth: credit.startMonth,
+    abonos: credit.abonos || []
+  };
+}
+
+function debtSpecFromPurchase(mv) {
+  return {
+    cuota: mv.amount,
+    installments: movementInstallments(mv),
+    startYear: mv.startYear,
+    startMonth: mv.startMonth,
+    abonos: mv.abonos || [],
+    plainAbono: true
+  };
+}
+
+function debtOwed(spec, year, month) {
+  const proj = projectDebt(spec);
+  if (!proj.schedule.length) return 0;
+  const index = periodIndex(year, month);
+  const first = proj.schedule[0];
+  if (index <= first.index) return first.balance + first.cuota + first.extra;
+  const row = proj.schedule.find(item => item.index === index);
+  if (row) return row.balance + row.cuota + row.extra;
+  const last = proj.schedule[proj.schedule.length - 1];
+  return index > last.index ? 0 : first.balance + first.cuota + first.extra;
+}
+
+function cardOwed(card, year, month) {
+  return (card.movements || []).reduce((sum, mv) => {
+    if (mv.billing === 'monthly') return sum;
+    return sum + debtOwed(debtSpecFromPurchase(mv), year, month);
+  }, 0);
+}
+
+function debtMonth(spec, year, month) {
+  const proj = projectDebt(spec);
+  const pos = proj.schedule.findIndex(row => row.index === periodIndex(year, month));
+  if (pos < 0) return null;
+  const row = proj.schedule[pos];
+  return { ...row, current: pos + 1, total: proj.schedule.length };
+}
+
+function creditAppliesToPeriod(credit, year, month) {
+  if (!credit || credit.active === false) return false;
+  return !!debtMonth(debtSpecFromCredit(credit), year, month);
+}
+
+function syncActiveCreditExpenses() {
+  const period = loadedPeriod();
+  if (!period) return;
+  const now = Date.now();
+  let changed = false;
+  const applicable = credits.filter(c => creditAppliesToPeriod(c, period.year, period.month));
+  const applicableIds = new Set(applicable.map(c => c.id));
+
+  applicable.forEach(c => {
+    if (dismissedCreditIds.includes(c.id)) return;
+    const due = debtMonth(debtSpecFromCredit(c), period.year, period.month);
+    if (!due) return;
+    const dueAmount = due.cuota + due.extra;
+    let idx = expenses.findIndex(e => e.creditId === c.id);
+    if (idx === -1) {
+      const nameKey = String(c.name || '').trim().toLowerCase();
+      idx = expenses.findIndex(e =>
+        !e.creditId &&
+        (e.movement || 'expense') === 'expense' &&
+        e.type === 'fixed' &&
+        (e.concept || 'salary') === 'salary' &&
+        String(e.name || '').trim().toLowerCase() === nameKey
+      );
+    }
+    if (idx === -1) {
+      const baseTs = new Date(period.year, period.month - 1, 1).getTime();
+      expenses.push({
+        name: c.name,
+        amount: dueAmount,
+        movement: 'expense',
+        type: 'fixed',
+        concept: 'salary',
+        tags: [],
+        done: false,
+        creditId: c.id,
+        createdAt: baseTs,
+        updatedAt: now
+      });
+      changed = true;
+      return;
+    }
+    const e = expenses[idx];
+    let touched = false;
+    if (e.creditId !== c.id) {
+      e.creditId = c.id;
+      touched = true;
+    }
+    if (!e.done) {
+      if (e.name !== c.name) { e.name = c.name; touched = true; }
+      if (Number(e.amount) !== dueAmount) { e.amount = dueAmount; touched = true; }
+      if (e.type !== 'fixed') { e.type = 'fixed'; touched = true; }
+      if ((e.concept || 'salary') !== 'salary') { e.concept = 'salary'; touched = true; }
+      if ((e.movement || 'expense') !== 'expense') { e.movement = 'expense'; touched = true; }
+    }
+    if (touched) {
+      e.updatedAt = now;
+      changed = true;
+    }
+  });
+
+  const before = expenses.length;
+  expenses = expenses.filter(e => {
+    if (!e.creditId || e.done) return true;
+    if (dismissedCreditIds.includes(e.creditId)) return false;
+    return applicableIds.has(e.creditId);
+  });
+  if (expenses.length !== before) changed = true;
+  if (changed) saveData();
+}
+
+function newRecordId() {
+  return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : `id_${Date.now()}`;
+}
+
+function loadCards() {
+  try {
+    const raw = localStorage.getItem(CARDS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    cards = Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    cards = [];
+  }
+  cards.forEach(card => {
+    if (!Array.isArray(card.movements)) card.movements = [];
+  });
+}
+
+function saveCards() {
+  localStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+  updateCardsButton();
+}
+
+function updateCardsButton() {
+  const btn = document.getElementById('openCardsBtn');
+  if (!btn) return;
+  const n = cards.filter(c => c.active !== false).length;
+  btn.textContent = n ? `Tarjetas (${n})` : 'Tarjetas';
+}
+
+function movementInstallments(mv) {
+  const count = Number(mv.installments);
+  if (count > 0) return count;
+  const start = periodIndex(mv.startYear, mv.startMonth);
+  const end = periodIndex(mv.endYear, mv.endMonth);
+  return end >= start ? end - start + 1 : 0;
+}
+
+function movementSpan(mv) {
+  const start = periodIndex(mv.startYear, mv.startMonth);
+  const total = movementInstallments(mv);
+  return { start, end: total ? start + total - 1 : start - 1, total };
+}
+
+function periodFromIndex(index) {
+  return {
+    year: Math.floor((index - 1) / 12),
+    month: ((index - 1) % 12) + 1
+  };
+}
+
+function movementApplies(mv, year, month) {
+  const current = periodIndex(year, month);
+  const start = periodIndex(mv.startYear, mv.startMonth);
+  if (!start || current < start) return false;
+  if (mv.billing === 'monthly') return true;
+  return !!debtMonth(debtSpecFromPurchase(mv), year, month);
+}
+
+function cardMonthTotal(card, year, month) {
+  if (!card || card.active === false) return 0;
+  return (card.movements || []).reduce((sum, mv) => {
+    if (mv.billing === 'monthly') {
+      return movementApplies(mv, year, month) ? sum + (Number(mv.amount) || 0) : sum;
+    }
+    const due = debtMonth(debtSpecFromPurchase(mv), year, month);
+    return due ? sum + due.cuota + due.extra : sum;
+  }, 0);
+}
+
+function syncCardExpenses() {
+  const period = loadedPeriod();
+  if (!period) return;
+  const now = Date.now();
+  let changed = false;
+  const applicable = cards.filter(card => card.active !== false && cardMonthTotal(card, period.year, period.month) > 0);
+  const applicableIds = new Set(applicable.map(card => card.id));
+
+  applicable.forEach(card => {
+    if (dismissedCardIds.includes(card.id)) return;
+    const total = cardMonthTotal(card, period.year, period.month);
+    let idx = expenses.findIndex(e => e.cardId === card.id);
+    if (idx === -1) {
+      const nameKey = String(card.name || '').trim().toLowerCase();
+      idx = expenses.findIndex(e =>
+        !e.cardId &&
+        !e.creditId &&
+        (e.movement || 'expense') === 'expense' &&
+        e.type === 'fixed' &&
+        (e.concept || 'salary') === 'salary' &&
+        String(e.name || '').trim().toLowerCase() === nameKey
+      );
+    }
+    if (idx === -1) {
+      const baseTs = new Date(period.year, period.month - 1, 1).getTime();
+      expenses.push({
+        name: card.name,
+        amount: total,
+        movement: 'expense',
+        type: 'fixed',
+        concept: 'salary',
+        tags: [],
+        done: false,
+        cardId: card.id,
+        createdAt: baseTs,
+        updatedAt: now
+      });
+      changed = true;
+      return;
+    }
+    const e = expenses[idx];
+    let touched = false;
+    if (e.cardId !== card.id) { e.cardId = card.id; touched = true; }
+    if (!e.done) {
+      if (e.name !== card.name) { e.name = card.name; touched = true; }
+      if (Number(e.amount) !== total) { e.amount = total; touched = true; }
+      if (e.type !== 'fixed') { e.type = 'fixed'; touched = true; }
+      if ((e.concept || 'salary') !== 'salary') { e.concept = 'salary'; touched = true; }
+      if ((e.movement || 'expense') !== 'expense') { e.movement = 'expense'; touched = true; }
+    }
+    if (touched) {
+      e.updatedAt = now;
+      changed = true;
+    }
+  });
+
+  const before = expenses.length;
+  expenses = expenses.filter(e => {
+    if (!e.cardId || e.done) return true;
+    if (dismissedCardIds.includes(e.cardId)) return false;
+    return applicableIds.has(e.cardId);
+  });
+  if (expenses.length !== before) changed = true;
+  if (changed) saveData();
+}
+
+function monthOptions(selected) {
+  return MONTH_NAMES.slice(1).map((name, i) => {
+    const value = i + 1;
+    return `<option value="${value}"${Number(selected) === value ? ' selected' : ''}>${name}</option>`;
+  }).join('');
+}
+
+function periodLabel(year, month) {
+  return `${MONTH_NAMES[Number(month)] || '—'} ${year || ''}`.trim();
+}
+
+function openCardsModal() {
+  const hint = document.getElementById('cardsHint');
+  const period = loadedPeriod();
+  hint.textContent = period
+    ? `En ${periodLabel(period.year, period.month)} se suma la cuota de cada compra vigente y entra como un gasto fijo del salario.`
+    : 'Carga un mes para insertar la cuota. Lo de cada mes se repite; lo de varias cuotas se crea una vez y va bajando.';
+  renderCardsModal();
+  document.getElementById('modalCardsWrap').removeAttribute('hidden');
+  document.getElementById('cardName').focus();
+}
+
+function closeCardsModal() {
+  document.getElementById('modalCardsWrap').setAttribute('hidden', '');
+  editingCardMovement = null;
+}
+
+function submitCard() {
+  const name = document.getElementById('cardName').value.trim();
+  if (!name) return;
+  const duplicate = cards.some(card => card.name.trim().toLowerCase() === name.toLowerCase());
+  if (duplicate) {
+    alert('Ya existe una tarjeta con ese nombre.');
+    return;
+  }
+  cards.push({ id: newRecordId(), name, active: true, movements: [] });
+  document.getElementById('cardName').value = '';
+  saveCards();
+  renderCardsModal();
+}
+
+function abonoSectionHtml(abonos, attrs, simple) {
+  const period = loadedPeriod() || { year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
+  const rows = (abonos || []).map(a => {
+    const effect = simple || a.mode === 'abono'
+      ? 'abono'
+      : (a.mode === 'cuota' ? 'baja la cuota' : 'acorta el plazo');
+    return `<div class="meta">${escapeHtml(periodLabel(a.year, a.month))} · ${formatCOP(Number(a.amount) || 0)} · ${effect} <button type="button" class="btn-secondary" data-abono-action="delete" data-abono-id="${escapeHtml(a.id)}" ${attrs}>Quitar</button></div>`;
+  }).join('');
+  return `<div class="abono-block" data-abono-form>
+    <div class="meta">${simple ? 'Pago parcial. Se resta del saldo y la cuota del mes sigue igual hasta que se acabe.' : 'Abono extra. Plazo mantiene la cuota y termina antes. Cuota mantiene los meses y baja el valor.'}</div>
+    <div class="form-grid">
+      <div><label>Abono</label><input data-abono-field="amount" type="text" inputmode="numeric" placeholder="$0" /></div>
+      <div><label>Mes</label><select data-abono-field="month">${monthOptions(period.month)}</select></div>
+      <div><label>Año</label><input data-abono-field="year" type="number" value="${period.year}" /></div>
+      ${simple ? '' : `<div><label>Afecta</label><select data-abono-field="mode"><option value="plazo">Plazo</option><option value="cuota">Cuota</option></select></div>`}
+      <div><button type="button" data-abono-action="add" ${attrs}>Registrar abono</button></div>
+    </div>
+    ${rows || '<div class="meta">Sin abonos.</div>'}
+  </div>`;
+}
+
+function handleAbonoClick(btn) {
+  const kind = btn.getAttribute('data-abono-kind');
+  const ownerId = btn.getAttribute('data-owner-id');
+  const movementId = btn.getAttribute('data-movement-id');
+  const target = kind === 'credit'
+    ? credits.find(c => c.id === ownerId)
+    : ((cards.find(c => c.id === ownerId) || {}).movements || []).find(mv => mv.id === movementId);
+  if (!target) return;
+  const action = btn.getAttribute('data-abono-action');
+  if (action === 'delete') {
+    target.abonos = (target.abonos || []).filter(a => a.id !== btn.getAttribute('data-abono-id'));
+  } else {
+    const form = btn.closest('[data-abono-form]');
+    const amount = clean(form.querySelector('[data-abono-field="amount"]').value);
+    const month = Number(form.querySelector('[data-abono-field="month"]').value);
+    const year = Number(form.querySelector('[data-abono-field="year"]').value);
+    const modeField = form.querySelector('[data-abono-field="mode"]');
+    const mode = kind === 'purchase' || !modeField
+      ? 'abono'
+      : (modeField.value === 'cuota' ? 'cuota' : 'plazo');
+    if (!amount || !year || !month) return;
+    const spec = kind === 'credit' ? debtSpecFromCredit(target) : debtSpecFromPurchase(target);
+    const preview = projectDebt(spec);
+    if (!preview.schedule.some(row => row.index === periodIndex(year, month))) {
+      alert('Ese mes la deuda ya no tiene cuota.');
+      return;
+    }
+    if (!target.abonos) target.abonos = [];
+    target.abonos.push({ id: newRecordId(), amount, year, month, mode });
+  }
+  if (kind === 'credit') saveCredits();
+  else {
+    expandedCardMoves.add(ownerId);
+    saveCards();
+  }
+  if (currentKey) {
+    if (kind === 'credit') syncActiveCreditExpenses();
+    else syncCardExpenses();
+    render();
+  }
+  if (kind === 'credit') renderCreditsModal();
+  else renderCardsModal();
+}
+
+function renderCardsModal() {
+  const list = document.getElementById('cardsList');
+  const period = loadedPeriod() || {
+    year: new Date().getFullYear(),
+    month: new Date().getMonth() + 1
+  };
+  if (!cards.length) {
+    list.innerHTML = '<p class="credit-empty">No hay tarjetas. Agrega una y luego sus compras.</p>';
+    return;
+  }
+  list.innerHTML = cards.map(card => {
+    const total = cardMonthTotal(card, period.year, period.month);
+    const activeLabel = card.active === false
+      ? '<span class="tag-pill tag-muted">Inactiva</span>'
+      : '<span class="tag-pill tag-ok">Activa</span>';
+    const omitted = period && dismissedCardIds.includes(card.id) && total > 0;
+    const moves = (card.movements || []).map(mv => {
+      const applies = movementApplies(mv, period.year, period.month);
+      const monthly = mv.billing === 'monthly';
+      const due = monthly ? null : debtMonth(debtSpecFromPurchase(mv), period.year, period.month);
+      const span = movementSpan(mv);
+      const cuotaLabel = monthly
+        ? (applies ? 'Cada mes' : 'Aún no inicia')
+        : (due ? `Cuota ${due.current} de ${due.total} · quedan ${due.total - due.current + 1}` : (periodIndex(period.year, period.month) < span.start ? 'Aún no inicia' : 'Ya terminó'));
+      const shownAmount = due ? due.cuota : (Number(mv.amount) || 0);
+      const detail = monthly
+        ? `Desde ${periodLabel(mv.startYear, mv.startMonth)}`
+        : `Desde ${periodLabel(mv.startYear, mv.startMonth)} · ${due ? due.total : span.total} cuotas`;
+      const owed = monthly ? null : debtOwed(debtSpecFromPurchase(mv), period.year, period.month);
+      const extraNote = due && due.extra ? ` · Abono ${formatCOP(due.extra)}` : '';
+      const abonoAttrs = `data-abono-kind="purchase" data-owner-id="${escapeHtml(card.id)}" data-movement-id="${escapeHtml(mv.id)}"`;
+      return `<div class="card-move">
+        <div style="flex:1 1 100%;">
+          <strong>${escapeHtml(mv.concept)}</strong>
+          <div class="meta">${formatCOP(shownAmount)} · ${escapeHtml(cuotaLabel)} · ${escapeHtml(detail)}${extraNote}${monthly ? '' : ` · Se debe ${formatCOP(owed)}`}</div>
+          <div class="actions" style="margin-top:0.35rem;">
+            <button type="button" class="btn-secondary" data-card-action="edit-movement" data-card-id="${escapeHtml(card.id)}" data-movement-id="${escapeHtml(mv.id)}">Editar</button>
+            <button type="button" class="btn-danger" data-card-action="delete-movement" data-card-id="${escapeHtml(card.id)}" data-movement-id="${escapeHtml(mv.id)}">Quitar</button>
+          </div>
+          ${monthly ? '' : abonoSectionHtml(mv.abonos, abonoAttrs, true)}
+        </div>
+      </div>`;
+    }).join('');
+    const editing = editingCardMovement && editingCardMovement.cardId === card.id
+      ? (card.movements || []).find(mv => mv.id === editingCardMovement.movementId)
+      : null;
+    const start = editing || period;
+    return `<div class="credit-item" data-card-root="${escapeHtml(card.id)}">
+      <div style="flex:1 1 220px;">
+        <strong>${escapeHtml(card.name)}</strong> ${activeLabel}
+        <div class="owed">Se debe ${formatCOP(cardOwed(card, period.year, period.month))}</div>
+        <div class="meta">Cuota de este mes ${formatCOP(total)}</div>
+        ${omitted ? '<div class="meta">Omitida en el mes cargado</div>' : ''}
+        <button type="button" class="moves-toggle" data-card-action="toggle-moves" data-card-id="${escapeHtml(card.id)}" aria-expanded="${expandedCardMoves.has(card.id) ? 'true' : 'false'}">${expandedCardMoves.has(card.id) ? 'Ocultar compras' : 'Mostrar compras'} (${(card.movements || []).length})</button>
+        <div data-card-moves ${expandedCardMoves.has(card.id) ? '' : 'hidden'}>
+          ${moves || '<div class="meta">Sin compras. La cuota de este mes es $0.</div>'}
+        </div>
+        <div class="form-grid card-move-form">
+          <div>
+            <label>Concepto</label>
+            <input data-field="concept" type="text" value="${editing ? escapeHtml(editing.concept) : ''}" placeholder="Ej. Mercado" />
+          </div>
+          <div>
+            <label>Cuota</label>
+            <input data-field="amount" type="text" inputmode="numeric" value="${editing ? escapeHtml(formatCOP(Number(editing.amount) || 0)) : ''}" placeholder="$0" />
+          </div>
+          <div>
+            <label>Tipo</label>
+            <select data-field="billing">
+              <option value="installments" ${!editing || editing.billing !== 'monthly' ? 'selected' : ''}>A cuotas</option>
+              <option value="monthly" ${editing && editing.billing === 'monthly' ? 'selected' : ''}>Cada mes</option>
+            </select>
+          </div>
+          <div>
+            <label>Desde</label>
+            <select data-field="startMonth">${monthOptions(start.startMonth || start.month)}</select>
+          </div>
+          <div>
+            <label>Año inicio</label>
+            <input data-field="startYear" type="number" value="${start.startYear || start.year}" />
+          </div>
+          <div data-installments-wrap ${editing && editing.billing === 'monthly' ? 'hidden' : ''}>
+            <label>Cuotas</label>
+            <input data-field="installments" type="number" min="1" value="${editing && editing.billing !== 'monthly' ? movementInstallments(editing) : ''}" placeholder="Ej. 36" />
+          </div>
+        </div>
+        <div class="actions" style="margin-top:0.55rem;">
+          <button type="button" data-card-action="save-movement" data-card-id="${escapeHtml(card.id)}">${editing ? 'Guardar compra' : 'Agregar compra'}</button>
+          ${editing ? `<button type="button" class="btn-secondary" data-card-action="cancel-movement" data-card-id="${escapeHtml(card.id)}">Cancelar</button>` : ''}
+          ${omitted ? `<button type="button" data-card-action="include" data-card-id="${escapeHtml(card.id)}">Incluir en este mes</button>` : ''}
+          <button type="button" class="btn-secondary" data-card-action="toggle" data-card-id="${escapeHtml(card.id)}">${card.active === false ? 'Activar' : 'Pausar'}</button>
+          <button type="button" class="btn-danger" data-card-action="delete-card" data-card-id="${escapeHtml(card.id)}">Eliminar tarjeta</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function readCardMovement(root) {
+  const field = name => root.querySelector(`[data-field="${name}"]`);
+  return {
+    concept: field('concept').value.trim(),
+    amount: clean(field('amount').value),
+    startMonth: Number(field('startMonth').value),
+    startYear: Number(field('startYear').value),
+    billing: field('billing').value === 'monthly' ? 'monthly' : 'installments',
+    installments: Number(field('installments').value)
+  };
+}
+
+function saveCardMovement(cardId) {
+  const card = cards.find(c => c.id === cardId);
+  const root = document.querySelector(`[data-card-root="${CSS.escape(cardId)}"]`);
+  if (!card || !root) return;
+  const data = readCardMovement(root);
+  if (!data.concept || !data.amount || !data.startYear || !data.startMonth) return;
+  if (data.billing !== 'monthly' && (!data.installments || data.installments < 1)) return;
+  if (data.billing === 'monthly') delete data.installments;
+  expandedCardMoves.add(cardId);
+  const editing = editingCardMovement && editingCardMovement.cardId === cardId
+    ? (card.movements || []).find(mv => mv.id === editingCardMovement.movementId)
+    : null;
+  if (editing) {
+    Object.assign(editing, data);
+    delete editing.endYear;
+    delete editing.endMonth;
+    if (data.billing === 'monthly') delete editing.installments;
+  } else card.movements.push({ id: newRecordId(), ...data });
+  editingCardMovement = null;
+  saveCards();
+  if (currentKey) {
+    syncCardExpenses();
+    render();
+  }
+  renderCardsModal();
+}
+
+function openCardDelete(id) {
+  const card = cards.find(c => c.id === id);
+  if (!card) return;
+  pendingDeleteIndex = null;
+  pendingCreditDeleteId = null;
+  pendingCardMovementDelete = null;
+  pendingCardDeleteId = id;
+  document.getElementById('modalDeleteTitle').textContent = 'Eliminar tarjeta';
+  document.getElementById('deleteConfirmName').textContent = card.name;
+  document.getElementById('deleteConfirmAmount').textContent = formatCOP(cardMonthTotal(card, (loadedPeriod() || { year: new Date().getFullYear(), month: new Date().getMonth() + 1 }).year, (loadedPeriod() || { year: new Date().getFullYear(), month: new Date().getMonth() + 1 }).month));
+  const extra = document.getElementById('deleteConfirmExtra');
+  extra.hidden = false;
+  extra.textContent = 'Los meses donde la cuota ya está finalizada la conservan. En los meses pendientes dejará de aparecer.';
+  document.getElementById('modalDeleteWrap').removeAttribute('hidden');
+}
+
+function openCardMovementDelete(cardId, movementId) {
+  const card = cards.find(c => c.id === cardId);
+  const mv = card && (card.movements || []).find(item => item.id === movementId);
+  if (!mv) return;
+  pendingDeleteIndex = null;
+  pendingCreditDeleteId = null;
+  pendingCardDeleteId = null;
+  pendingCardMovementDelete = { cardId, movementId };
+  document.getElementById('modalDeleteTitle').textContent = 'Quitar compra';
+  document.getElementById('deleteConfirmName').textContent = mv.concept;
+  document.getElementById('deleteConfirmAmount').textContent = formatCOP(Number(mv.amount) || 0);
+  const extra = document.getElementById('deleteConfirmExtra');
+  extra.hidden = false;
+  extra.textContent = 'La cuota mensual de la tarjeta se recalcula con las compras que queden.';
+  document.getElementById('modalDeleteWrap').removeAttribute('hidden');
+}
+
+function selectedPeriodDefaults() {
+  const loaded = loadedPeriod();
+  if (loaded) return loaded;
+  return {
+    year: Number(document.getElementById('year').value) || new Date().getFullYear(),
+    month: Number(document.getElementById('month').value) || 1
+  };
+}
+
+function resetCreditForm() {
+  creditModalEditId = null;
+  const period = selectedPeriodDefaults();
+  document.getElementById('cName').value = '';
+  document.getElementById('cAmount').value = '';
+  document.getElementById('cStartYear').value = period.year;
+  document.getElementById('cStartMonth').value = String(period.month);
+  document.getElementById('cInstallments').value = '';
+  document.getElementById('creditSubmitBtn').textContent = 'Agregar crédito';
+  document.getElementById('creditCancelEditBtn').hidden = true;
+}
+
+function openCreditsModal() {
+  resetCreditForm();
+  const hint = document.getElementById('creditsHint');
+  const period = loadedPeriod();
+  if (period) {
+    hint.textContent = `La cuota entra en ${MONTH_NAMES[period.month]} ${period.year} y en los meses siguientes, como gasto fijo del salario. Si ya marcaste la cuota como finalizada, ese mes no se modifica.`;
+  } else {
+    hint.textContent = 'Carga un mes para insertar las cuotas. Cada crédito activo se suma como gasto fijo del salario desde el mes de inicio.';
+  }
+  renderCreditsModal();
+  document.getElementById('modalCreditsWrap').removeAttribute('hidden');
+  document.getElementById('cName').focus();
+}
+
+function closeCreditsModal() {
+  document.getElementById('modalCreditsWrap').setAttribute('hidden', '');
+  creditModalEditId = null;
+}
+
+function creditPaymentStats(creditId) {
+  let paidCount = 0;
+  let paidAmount = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || !/^finanzas-\d+-\d+$/.test(key)) continue;
+    try {
+      const data = JSON.parse(localStorage.getItem(key) || '{}');
+      (data.expenses || []).forEach(item => {
+        if (item.creditId !== creditId || !item.done) return;
+        paidCount += 1;
+        paidAmount += Number(item.amount) || 0;
+      });
+    } catch (_) {}
+  }
+  return { paidCount, paidAmount };
+}
+
+function creditProgress(credit) {
+  const stats = creditPaymentStats(credit.id);
+  const period = loadedPeriod() || {
+    year: new Date().getFullYear(),
+    month: new Date().getMonth() + 1
+  };
+  const due = debtMonth(debtSpecFromCredit(credit), period.year, period.month);
+  const proj = projectDebt(debtSpecFromCredit(credit));
+  const originalCuota = Number(credit.amount) || 0;
+  const installments = proj.schedule.length || Number(credit.installments) || 0;
+  const remainingAmount = debtOwed(debtSpecFromCredit(credit), period.year, period.month);
+  let current = 0;
+  let remainingCount = installments;
+  if (due) {
+    current = due.current;
+    remainingCount = due.total - due.current + 1;
+  } else if (proj.schedule.length && periodIndex(period.year, period.month) > proj.schedule[proj.schedule.length - 1].index) {
+    current = proj.schedule.length;
+    remainingCount = 0;
+  }
+  return {
+    ...stats,
+    installments,
+    cuota: due ? due.cuota : originalCuota,
+    originalCuota,
+    extra: due ? due.extra : 0,
+    current,
+    remainingCount,
+    remainingAmount
+  };
+}
+
+function renderCreditsModal() {
+  const list = document.getElementById('creditsList');
+  const active = credits.filter(c => c.active !== false);
+  const inactive = credits.filter(c => c.active === false);
+  const period = loadedPeriod();
+
+  const itemHtml = (c) => {
+    const omitted = period && creditAppliesToPeriod(c, period.year, period.month) && dismissedCreditIds.includes(c.id);
+    const activeLabel = c.active === false
+      ? '<span class="tag-pill tag-muted">Inactivo</span>'
+      : '<span class="tag-pill tag-ok">Activo</span>';
+    const since = `${MONTH_NAMES[Number(c.startMonth)] || '—'} ${c.startYear || ''}`.trim();
+    const progress = creditProgress(c);
+    const cuotaLabel = progress.current < 1
+      ? 'Aún no inicia'
+      : (progress.installments
+        ? `Vas en la cuota ${progress.current} de ${progress.installments}`
+        : `Vas en la cuota ${progress.current}`);
+    const paidLabel = `Pagado ${formatCOP(progress.paidAmount)} (${progress.paidCount} ${progress.paidCount === 1 ? 'cuota' : 'cuotas'})`;
+    const leftLabel = `Faltan ${progress.remainingCount} ${progress.remainingCount === 1 ? 'cuota' : 'cuotas'}`;
+    const actions = [
+      `<button type="button" class="btn-secondary" data-credit-action="edit" data-credit-id="${escapeHtml(c.id)}">Editar</button>`,
+      `<button type="button" class="btn-secondary" data-credit-action="toggle" data-credit-id="${escapeHtml(c.id)}">${c.active === false ? 'Activar' : 'Pausar'}</button>`,
+      omitted ? `<button type="button" data-credit-action="include" data-credit-id="${escapeHtml(c.id)}">Incluir en este mes</button>` : '',
+      `<button type="button" class="btn-danger" data-credit-action="delete" data-credit-id="${escapeHtml(c.id)}">Eliminar</button>`
+    ].join('');
+    return `<div class="credit-item">
+      <div>
+        <strong>${escapeHtml(c.name)}</strong> ${activeLabel}
+        <div class="owed">Se debe ${formatCOP(progress.remainingAmount)}</div>
+        <div class="meta">Cuota de este mes ${formatCOP(progress.cuota)}${progress.originalCuota !== progress.cuota ? ` (pactada ${formatCOP(progress.originalCuota)})` : ''}${progress.extra ? ` · Abono ${formatCOP(progress.extra)}` : ''} · Desde ${escapeHtml(since)}</div>
+        <div class="meta">${escapeHtml(cuotaLabel)} · ${escapeHtml(paidLabel)}</div>
+        <div class="meta">${escapeHtml(leftLabel)}</div>
+        ${omitted ? '<div class="meta">Omitida en el mes cargado</div>' : ''}
+        ${abonoSectionHtml(c.abonos, `data-abono-kind="credit" data-owner-id="${escapeHtml(c.id)}"`)}
+      </div>
+      <div class="actions">${actions}</div>
+    </div>`;
+  };
+
+  let html = '';
+  if (active.length === 0) {
+    html += '<p class="credit-empty">No hay créditos activos. Agrega uno y su cuota se sumará cada mes.</p>';
+  } else {
+    html += active.map(itemHtml).join('');
+  }
+  if (inactive.length) {
+    html += `<button type="button" class="btn-secondary" id="toggleInactiveCredits" style="width:auto;margin-top:0.35rem;">${showInactiveCredits ? 'Ocultar inactivos' : `Ver inactivos (${inactive.length})`}</button>`;
+    if (showInactiveCredits) html += inactive.map(itemHtml).join('');
+  }
+  list.innerHTML = html;
+}
+
+function submitCreditForm() {
+  const name = document.getElementById('cName').value.trim();
+  const amount = clean(document.getElementById('cAmount').value);
+  const startYear = Number(document.getElementById('cStartYear').value);
+  const startMonth = Number(document.getElementById('cStartMonth').value);
+  const installments = Number(document.getElementById('cInstallments').value);
+  if (!name || !amount || !startYear || !startMonth || !installments || installments < 1) return;
+  const duplicate = credits.some(c => c.id !== creditModalEditId && c.name.trim().toLowerCase() === name.toLowerCase());
+  if (duplicate) {
+    alert('Ya existe un crédito con ese nombre.');
+    return;
+  }
+  if (creditModalEditId) {
+    const current = credits.find(c => c.id === creditModalEditId);
+    if (!current) return;
+    Object.assign(current, { name, amount, startYear, startMonth, installments });
+  } else {
+    const id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : `c_${Date.now()}`;
+    credits.push({ id, name, amount, startYear, startMonth, installments, active: true });
+  }
+  saveCredits();
+  resetCreditForm();
+  if (currentKey) {
+    syncActiveCreditExpenses();
+    render();
+  }
+  renderCreditsModal();
+}
+
+function editCredit(id) {
+  const credit = credits.find(c => c.id === id);
+  if (!credit) return;
+  creditModalEditId = id;
+  document.getElementById('cName').value = credit.name;
+  document.getElementById('cAmount').value = formatCOP(Number(credit.amount) || 0);
+  document.getElementById('cStartYear').value = credit.startYear;
+  document.getElementById('cStartMonth').value = String(credit.startMonth);
+  document.getElementById('cInstallments').value = credit.installments || '';
+  document.getElementById('creditSubmitBtn').textContent = 'Guardar cambios';
+  document.getElementById('creditCancelEditBtn').hidden = false;
+  document.getElementById('cName').focus();
+}
+
+function toggleCreditActive(id) {
+  const credit = credits.find(c => c.id === id);
+  if (!credit) return;
+  credit.active = credit.active === false;
+  saveCredits();
+  if (currentKey) {
+    syncActiveCreditExpenses();
+    render();
+  }
+  renderCreditsModal();
+}
+
+function includeCreditThisMonth(id) {
+  dismissedCreditIds = dismissedCreditIds.filter(x => x !== id);
+  saveData();
+  syncActiveCreditExpenses();
+  render();
+  renderCreditsModal();
+}
+
+function openCreditDelete(id) {
+  const credit = credits.find(c => c.id === id);
+  if (!credit) return;
+  pendingDeleteIndex = null;
+  pendingCreditDeleteId = id;
+  document.getElementById('modalDeleteTitle').textContent = 'Eliminar crédito';
+  document.getElementById('deleteConfirmName').textContent = credit.name;
+  document.getElementById('deleteConfirmAmount').textContent = formatCOP(Number(credit.amount) || 0);
+  const extra = document.getElementById('deleteConfirmExtra');
+  extra.hidden = false;
+  extra.textContent = 'Los meses donde la cuota ya está finalizada la conservan. En los meses pendientes dejará de aparecer.';
+  document.getElementById('modalDeleteWrap').removeAttribute('hidden');
 }
 
 function matchesSearchQuery(e, q) {
@@ -852,35 +1883,82 @@ function getKey(){
   return `finanzas-${y}-${m}`;
 }
 
+function findPreviousMonthData(year, month) {
+  const target = periodIndex(year, month);
+  let best = null;
+  for (let i = 0; i < localStorage.length; i++) {
+    const match = /^finanzas-(\d+)-(\d+)$/.exec(localStorage.key(i) || '');
+    if (!match) continue;
+    const idx = periodIndex(Number(match[1]), Number(match[2]));
+    if (idx >= target || (best && idx <= best.idx)) continue;
+    try {
+      const data = JSON.parse(localStorage.getItem(localStorage.key(i)) || '');
+      if (!data || !Array.isArray(data.expenses)) continue;
+      best = { idx, data };
+    } catch (_) {}
+  }
+  return best ? best.data : null;
+}
+
+function defaultMonthExpenses(baseTs) {
+  return [
+    { name: "Arriendo", amount: 400000, type: "fixed", concept: "salary", done: false },
+    { name: "Internet", amount: 120000, type: "fixed", concept: "salary", done: false },
+    { name: "T.C", amount: 100000, type: "fixed", concept: "salary", done: false },
+    { name: "Crédito", amount: 600000, type: "fixed", concept: "salary", done: false },
+    { name: "Remesa", amount: 550000, type: "fixed", concept: "salary", done: false },
+    { name: "Credito 20 minutos", amount: 138000, type: "fixed", concept: "salary", done: false },
+    { name: "Recibos Casa", amount: 60000, type: "fixed", concept: "salary", done: false },
+    { name: "Recibos Mamá", amount: 120000, type: "fixed", concept: "salary", done: false },
+    { name: "Alimento Gatas", amount: 75000, type: "fixed", concept: "salary", done: false },
+    { name: "Alimento Perras", amount: 130000, type: "fixed", concept: "salary", done: false }
+  ].map(e => ({ ...e, createdAt: baseTs, updatedAt: baseTs }));
+}
+
+function copyExpensesFromMonth(source, baseTs) {
+  return (source || []).map(e => {
+    const copy = {
+      name: e.name,
+      amount: Number(e.amount) || 0,
+      movement: e.movement || 'expense',
+      type: e.type,
+      concept: e.concept != null ? e.concept : 'salary',
+      tags: getTagsArray(e),
+      done: false,
+      createdAt: baseTs,
+      updatedAt: baseTs
+    };
+    if (e.creditId) copy.creditId = e.creditId;
+    if (e.cardId) copy.cardId = e.cardId;
+    return copy;
+  });
+}
+
 function loadData(){
   currentKey = getKey();
   const dataRaw = localStorage.getItem(currentKey);
   const baseTs = getMonthStartTimestamp();
 
   if(!dataRaw){
-    // default data
-    expenses = [
-      { name: "Arriendo", amount: 400000, type: "fixed", concept: "salary", done:false },
-      { name: "Internet", amount: 120000, type: "fixed", concept: "salary", done:false },
-      { name: "T.C", amount: 100000, type: "fixed", concept: "salary", done:false },
-      { name: "Crédito", amount: 600000, type: "fixed", concept: "salary", done:false },
-      { name: "Remesa", amount: 550000, type: "fixed", concept: "salary", done:false },
-      { name: "Credito 20 minutos", amount: 138000, type: "fixed", concept: "salary", done:false },
-      { name: "Recibos Casa", amount: 60000, type: "fixed", concept: "salary", done:false },
-      { name: "Recibos Mamá", amount: 120000, type: "fixed", concept: "salary", done:false },
-      { name: "Alimento Gatas", amount: 75000, type: "fixed", concept: "salary", done:false },
-      { name: "Alimento Perras", amount: 130000, type: "fixed", concept: "salary", done:false }
-    ].map(e => ({
-      ...e,
-      createdAt: baseTs,
-      updatedAt: baseTs
-    }));
-    salary = 4000000;
+    dismissedCreditIds = [];
+    dismissedCardIds = [];
+    const year = Number(document.getElementById('year').value);
+    const month = Number(document.getElementById('month').value);
+    const previous = findPreviousMonthData(year, month);
+    if (previous) {
+      expenses = copyExpensesFromMonth(previous.expenses, baseTs);
+      salary = Number(previous.salary) || 0;
+    } else {
+      expenses = defaultMonthExpenses(baseTs);
+      salary = 4000000;
+    }
     saveData();
   } else {
     const data = JSON.parse(dataRaw);
     expenses = data.expenses || [];
     salary = data.salary || 4000000;
+    dismissedCreditIds = Array.isArray(data.dismissedCreditIds) ? data.dismissedCreditIds : [];
+    dismissedCardIds = Array.isArray(data.dismissedCardIds) ? data.dismissedCardIds : [];
 
     const fallbackTs = getMonthStartTimestamp();
 
@@ -892,15 +1970,112 @@ function loadData(){
   }
 
   document.getElementById('salary').value = formatCOP(salary);
+  syncActiveCreditExpenses();
+  syncCardExpenses();
   render();
 }
 
 function saveData(){
-  localStorage.setItem(currentKey, JSON.stringify({ expenses, salary }));
+  localStorage.setItem(currentKey, JSON.stringify({ expenses, salary, dismissedCreditIds, dismissedCardIds }));
 }
 
 document.getElementById("mAmount").addEventListener("input", e => {
   e.target.value = formatCOP(clean(e.target.value));
+});
+
+document.getElementById("cAmount").addEventListener("input", e => {
+  e.target.value = formatCOP(clean(e.target.value));
+});
+
+document.getElementById("creditsList").addEventListener("click", ev => {
+  const abonoBtn = ev.target.closest("[data-abono-action]");
+  if (abonoBtn) {
+    handleAbonoClick(abonoBtn);
+    return;
+  }
+  const toggle = ev.target.closest("#toggleInactiveCredits");
+  if (toggle) {
+    showInactiveCredits = !showInactiveCredits;
+    renderCreditsModal();
+    return;
+  }
+  const btn = ev.target.closest("[data-credit-action]");
+  if (!btn) return;
+  const id = btn.getAttribute("data-credit-id");
+  const action = btn.getAttribute("data-credit-action");
+  if (action === "edit") editCredit(id);
+  else if (action === "toggle") toggleCreditActive(id);
+  else if (action === "include") includeCreditThisMonth(id);
+  else if (action === "delete") openCreditDelete(id);
+});
+
+document.getElementById("cardsList").addEventListener("click", ev => {
+  const abonoBtn = ev.target.closest("[data-abono-action]");
+  if (abonoBtn) {
+    handleAbonoClick(abonoBtn);
+    return;
+  }
+  const btn = ev.target.closest("[data-card-action]");
+  if (!btn) return;
+  const cardId = btn.getAttribute("data-card-id");
+  const movementId = btn.getAttribute("data-movement-id");
+  const action = btn.getAttribute("data-card-action");
+  if (action === "save-movement") saveCardMovement(cardId);
+  else if (action === "edit-movement") {
+    editingCardMovement = { cardId, movementId };
+    expandedCardMoves.add(cardId);
+    renderCardsModal();
+  } else if (action === "toggle-moves") {
+    if (expandedCardMoves.has(cardId)) expandedCardMoves.delete(cardId);
+    else expandedCardMoves.add(cardId);
+    const root = btn.closest("[data-card-root]");
+    const panel = root.querySelector("[data-card-moves]");
+    const open = expandedCardMoves.has(cardId);
+    if (open) panel.removeAttribute("hidden");
+    else panel.setAttribute("hidden", "");
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+    const count = (cards.find(c => c.id === cardId)?.movements || []).length;
+    btn.textContent = `${open ? "Ocultar compras" : "Mostrar compras"} (${count})`;
+  } else if (action === "cancel-movement") {
+    editingCardMovement = null;
+    renderCardsModal();
+  } else if (action === "delete-movement") openCardMovementDelete(cardId, movementId);
+  else if (action === "delete-card") openCardDelete(cardId);
+  else if (action === "toggle") {
+    const card = cards.find(c => c.id === cardId);
+    if (!card) return;
+    card.active = card.active === false;
+    saveCards();
+    if (currentKey) {
+      syncCardExpenses();
+      render();
+    }
+    renderCardsModal();
+  } else if (action === "include") {
+    dismissedCardIds = dismissedCardIds.filter(id => id !== cardId);
+    saveData();
+    syncCardExpenses();
+    render();
+    renderCardsModal();
+  }
+});
+
+document.getElementById("cardsList").addEventListener("change", ev => {
+  if (ev.target.getAttribute("data-field") !== "billing") return;
+  const wrap = ev.target.closest("[data-card-root]").querySelector("[data-installments-wrap]");
+  if (wrap) wrap.hidden = ev.target.value === "monthly";
+});
+
+document.getElementById("creditsList").addEventListener("input", ev => {
+  if (ev.target.getAttribute("data-abono-field") === "amount") {
+    ev.target.value = formatCOP(clean(ev.target.value));
+  }
+});
+
+document.getElementById("cardsList").addEventListener("input", ev => {
+  if (ev.target.getAttribute("data-field") === "amount" || ev.target.getAttribute("data-abono-field") === "amount") {
+    ev.target.value = formatCOP(clean(ev.target.value));
+  }
 });
 
 document.getElementById("backupToggle").addEventListener("click", () => {
@@ -920,8 +2095,11 @@ document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
   const move = document.getElementById("modalMovementWrap");
   const del = document.getElementById("modalDeleteWrap");
-  if (!move.hasAttribute("hidden")) closeMovementModal();
-  else if (!del.hasAttribute("hidden")) closeDeleteModal();
+  const creditsModal = document.getElementById("modalCreditsWrap");
+  if (!del.hasAttribute("hidden")) closeDeleteModal();
+  else if (!move.hasAttribute("hidden")) closeMovementModal();
+  else if (creditsModal && !creditsModal.hasAttribute("hidden")) closeCreditsModal();
+  else if (document.getElementById("modalCardsWrap") && !document.getElementById("modalCardsWrap").hasAttribute("hidden")) closeCardsModal();
 });
 
 document.getElementById("salary").addEventListener("input", e => {
@@ -1024,6 +2202,22 @@ function importFinanzasBackupText(text, mode){
   }
 
   return count;
+}
+
+function setAllDone(done) {
+  if (!currentKey || !expenses.length) return;
+  const now = Date.now();
+  let changed = false;
+  expenses.forEach(e => {
+    if (!!e.done === done) return;
+    e.done = done;
+    if (done) e.completedAt = now;
+    else delete e.completedAt;
+    changed = true;
+  });
+  if (!changed) return;
+  saveData();
+  render();
 }
 
 function toggleDone(i){
@@ -1165,7 +2359,7 @@ function render(){
 
     table.innerHTML+=`
       <tr class="${e.done?'done':''}">
-        <td>${escapeHtml(e.name)}</td>
+        <td>${escapeHtml(e.name)}${e.creditId ? ' <span class="tag-pill">cuota</span>' : ''}${e.cardId ? ' <span class="tag-pill">tarjeta</span>' : ''}</td>
         <td>${formatCOP(e.amount)}</td>
         <td>${translations[movement]}</td>
         <td>${translations[e.type]}</td>
@@ -1198,6 +2392,11 @@ function render(){
   }
   document.getElementById("filterDone").addEventListener("change", () => render());
 }
+
+loadCredits();
+updateCreditsButton();
+loadCards();
+updateCardsButton();
 </script>
 </body>
 </html>
