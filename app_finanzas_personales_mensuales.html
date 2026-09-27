@@ -31,7 +31,8 @@
       background: linear-gradient(165deg, var(--bg) 0%, #eef1f9 50%, #e8ecf6 100%);
       color: var(--text);
       line-height: 1.45;
-      padding: clamp(1rem, 4vw, 2rem);
+      padding: clamp(0.75rem, 3vw, 1.5rem);
+      padding-bottom: calc(5.2rem + env(safe-area-inset-bottom));
     }
 
     h1 {
@@ -156,6 +157,11 @@
       color: var(--text);
       font-variant-numeric: tabular-nums;
     }
+    .dash-group { margin: 0.2rem 0 0.15rem; font-size: 1.05rem; }
+    .dash-group.act { margin-top: 1.1rem; }
+    .dash-note { margin: 0 0 0.6rem; font-size: 0.78rem; color: var(--muted); }
+    .summary-card.est { border-color: #c5d4fb; }
+    .summary-card.act { border-color: #b7e4d4; }
 
     .total { font-size: 18px; font-weight: bold; }
 
@@ -412,13 +418,104 @@
     }
     .moves-toggle:hover { background: transparent !important; box-shadow: none !important; transform: none; }
     [data-card-moves][hidden] { display: none !important; }
-    .abono-block { flex: 1 1 100%; margin-top: 0.65rem; padding-top: 0.55rem; border-top: 1px dashed var(--border); }
-    .abono-block .meta button { width: auto; margin-left: 0.35rem; padding: 0.15rem 0.45rem; font-size: 0.72rem; }
+    .abono-block {
+      flex: 1 1 100%;
+      margin-top: 0.75rem;
+      padding: 0.7rem 0.75rem 0.35rem;
+      border: 1px solid #d9e3fb;
+      border-radius: 10px;
+      background: #f4f7ff;
+    }
+    .abono-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.6rem;
+      margin-bottom: 0.15rem;
+    }
+    .abono-head strong { font-size: 0.84rem; }
+    .abono-head span { font-size: 0.78rem; color: var(--muted); text-align: right; }
+    .abono-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+      padding: 0.55rem 0;
+      border-top: 1px solid #e3eaf8;
+    }
+    .abono-row .amount {
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .abono-row .detail { margin-top: 0.1rem; font-size: 0.78rem; color: var(--muted); }
+    .abono-row button { width: auto; padding: 0.32rem 0.6rem; font-size: 0.75rem; }
     .credit-empty { margin: 0.85rem 0 0; font-size: 0.85rem; color: var(--muted); }
     .tag-pill.tag-muted { background: #f0f2f7; color: var(--muted); }
     .tag-pill.tag-ok { background: #e7f7f1; color: #0d7a56; }
+    .kind-pill {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 0.12rem 0.45rem;
+      border-radius: 6px;
+    }
+    .kind-expense { background: #f6ecec; color: #8a4545; }
+    .kind-income { background: #e8f4ee; color: #246b4a; }
+    tr.mov-expense td:first-child { border-left: 3px solid #c98989; }
+    tr.mov-income td:first-child { border-left: 3px solid #6aab8a; }
 
     /* Responsive: solo tabla de movimientos (no afecta tag-summary-table ni otras tablas) */
+    .tabbar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 30;
+      display: flex;
+      gap: 0.2rem;
+      background: rgba(255, 255, 255, 0.96);
+      border-top: 1px solid var(--border);
+      padding: 0.35rem 0.35rem calc(0.35rem + env(safe-area-inset-bottom));
+      backdrop-filter: blur(8px);
+    }
+    .tabbar button {
+      flex: 1;
+      background: transparent;
+      color: var(--muted);
+      box-shadow: none;
+      border-radius: 10px;
+      font-size: 0.68rem;
+      line-height: 1.2;
+      padding: 0.45rem 0.15rem;
+    }
+    .tabbar button.active {
+      background: var(--accent-soft);
+      color: #1e3a8a;
+    }
+    .tabbar button:hover { transform: none; box-shadow: none; background: #f4f6fb; }
+    .tab-panel[hidden] { display: none !important; }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .section-head h3 { margin: 0; }
+    .section-head button { width: auto; white-space: nowrap; }
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(4.5rem, 28%) 1fr auto;
+      gap: 0.45rem;
+      align-items: center;
+      margin: 0.35rem 0;
+      font-size: 0.78rem;
+    }
+    .bar-track { height: 8px; background: #eef1f8; border-radius: 99px; overflow: hidden; }
+    .bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #6d93f5); border-radius: 99px; }
+    .bar-row strong { font-variant-numeric: tabular-nums; font-size: 0.75rem; }
+
     @media (max-width: 768px) {
       .form-grid > * { flex: 1 1 100%; }
       table.movements-table,
@@ -441,6 +538,16 @@
         box-shadow: 0 1px 8px rgba(26, 31, 46, 0.06);
         border: 1px solid var(--border);
       }
+      table.movements-table tr.mov-expense {
+        border-color: #e4c8c8;
+        box-shadow: inset 3px 0 0 #c98989;
+      }
+      table.movements-table tr.mov-income {
+        border-color: #c5ddd0;
+        box-shadow: inset 3px 0 0 #6aab8a;
+      }
+      table.movements-table tr.mov-expense td:first-child,
+      table.movements-table tr.mov-income td:first-child { border-left: none; }
       table.movements-table td {
         display: grid;
         grid-template-columns: minmax(4.25rem, 44%) 1fr;
@@ -518,6 +625,9 @@
       .tag-summary-table td {
         display: table-cell;
       }
+      .credit-item .actions { width: 100%; }
+      .credit-item .actions button { flex: 1 1 calc(50% - 0.4rem); width: auto; }
+      .toolbar-row button, .toolbar-row select { flex: 1 1 calc(50% - 0.4rem); width: auto; }
     }
   </style>
 </head>
@@ -525,7 +635,6 @@
 <div class="container">
   <h1>Finanzas Mensuales</h1>
 
-  <!-- Selector mes/año -->
   <div class="card">
     <h3>Periodo</h3>
     <div class="form-grid">
@@ -553,24 +662,101 @@
       <div>
         <button onclick="loadData()">Cargar</button>
       </div>
-      <div>
-        <button type="button" class="btn-secondary" id="openCreditsBtn" onclick="openCreditsModal()">Créditos activos</button>
-      </div>
-      <div>
-        <button type="button" class="btn-secondary" id="openCardsBtn" onclick="openCardsModal()">Tarjetas</button>
-      </div>
     </div>
   </div>
 
-  <div class="card collapsible-card">
-    <button type="button" class="collapsible-trigger" id="backupToggle" aria-expanded="false" aria-controls="backupBody">
-      <span>Copia de seguridad (localStorage)</span>
-      <span class="chev" aria-hidden="true">▼</span>
-    </button>
-    <div class="collapsible-inner" id="backupBody" hidden>
-      <p>
-        Exporta o importa todos los meses y los créditos activos guardados en este navegador (<code>finanzas-año-mes</code>). No hace falta servidor.
-      </p>
+  <section data-tab-panel="dashboard">
+    <h2 class="dash-group">Estimado</h2>
+    <p class="dash-note">Movimientos creados que todavía no marcas como finalizados.</p>
+    <div class="grid">
+      <div class="card summary-card est"><h3>Gastos fijos</h3><div id="totalFixed"></div></div>
+      <div class="card summary-card est"><h3>Gastos variables</h3><div id="totalVariable"></div></div>
+      <div class="card summary-card est"><h3>Gastos totales</h3><div id="totalExpenses"></div></div>
+      <div class="card summary-card est"><h3>Ahorros este mes</h3><div id="totalSavings"></div></div>
+      <div class="card summary-card est"><h3>Otros ingresos</h3><div id="otherIncomes"></div></div>
+      <div class="card summary-card est"><h3>Salario + ingresos</h3><div id="estimatedSalary"></div></div>
+      <div class="card summary-card est"><h3>Dinero restante del mes</h3><div id="remaining"></div><p id="remainingHint" style="font-size:0.68rem;color:var(--muted);margin:0.35rem 0 0 0;font-weight:500;line-height:1.35;"></p></div>
+    </div>
+    <h2 class="dash-group act">Actual</h2>
+    <p class="dash-note">Solo lo que ya marcaste como finalizado.</p>
+    <div class="grid">
+      <div class="card summary-card act"><h3>Gastos fijos</h3><div id="doneFixed"></div></div>
+      <div class="card summary-card act"><h3>Gastos variables</h3><div id="doneVariable"></div></div>
+      <div class="card summary-card act"><h3>Gastos totales</h3><div id="doneExpenses"></div></div>
+      <div class="card summary-card act"><h3>Ahorros este mes</h3><div id="doneSavings"></div></div>
+      <div class="card summary-card act"><h3>Otros ingresos</h3><div id="doneIncomes"></div></div>
+      <div class="card summary-card act"><h3>Salario + ingresos</h3><div id="adjustedSalary"></div></div>
+      <div class="card summary-card act"><h3>Dinero actual</h3><div id="expectedMoneyDone"></div></div>
+      <div class="card summary-card act"><h3>Ahorro general</h3><div id="totalGeneralSavings"></div><p style="font-size:0.68rem;color:var(--muted);margin:0.35rem 0 0 0;font-weight:500;line-height:1.35;">Acumulado de todos los meses, solo finalizado.</p></div>
+    </div>
+    <div class="card">
+      <h3>Distribución del mes</h3>
+      <div id="mixChart"></div>
+    </div>
+    <div class="card">
+      <h3>Resumen por etiquetas</h3>
+      <p>Estimado es lo creado que aún no finalizas. Actual es lo ya finalizado. Sin etiqueta agrupa las filas que no tienen.</p>
+      <div id="tagChart"></div>
+      <div id="tagSummary"></div>
+    </div>
+  </section>
+
+  <section data-tab-panel="movements" class="tab-panel" hidden>
+    <div class="card">
+      <h3>Movimientos del mes</h3>
+      <div class="toolbar-row">
+        <label for="searchMovements" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Buscar</label>
+        <input id="searchMovements" type="search" placeholder="Buscar: nombre, etiqueta, tipo…" aria-label="Buscar movimientos" />
+        <select id="filterDone" style="width:auto;">
+          <option value="all">Todos</option>
+          <option value="done">Solo finalizados</option>
+          <option value="pending" selected>Solo pendientes</option>
+        </select>
+        <button type="button" class="btn-secondary" onclick="setAllDone(true)" style="width:auto;white-space:nowrap;">Finalizar todos</button>
+        <button type="button" class="btn-secondary" onclick="setAllDone(false)" style="width:auto;white-space:nowrap;">Desmarcar todos</button>
+        <button type="button" onclick="openMovementModal('add')" style="width:auto;white-space:nowrap;">+ Nuevo movimiento</button>
+      </div>
+      <div class="table-container" style="border: none;">
+        <table class="movements-table">
+          <thead>
+            <tr>
+              <th>Nombre</th><th>Monto</th><th>Movimiento</th><th>Tipo</th><th>Concepto</th><th>Etiquetas</th><th>Creado</th><th>Actualizado</th><th>Fecha fin</th><th>Finalizado</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="expenseTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section data-tab-panel="debts" class="tab-panel" hidden>
+    <div class="card">
+      <div class="section-head">
+        <h3>Créditos</h3>
+        <button type="button" onclick="openCreditsModal()">+ Crédito</button>
+      </div>
+      <p>La cuota entra cada mes como gasto fijo del salario.</p>
+      <div id="creditsList" class="credit-list"></div>
+    </div>
+    <div class="card">
+      <div class="section-head">
+        <h3>Tarjetas</h3>
+        <button type="button" onclick="openCardsModal()">+ Tarjeta</button>
+      </div>
+      <p>Cada compra suma a la cuota del mes. El formulario se abre aparte.</p>
+      <div id="cardsList" class="credit-list"></div>
+    </div>
+  </section>
+
+  <section data-tab-panel="settings" class="tab-panel" hidden>
+    <div class="card">
+      <h3>Salario base</h3>
+      <label for="salary">Salario del mes cargado</label>
+      <input id="salary" type="text" placeholder="$0" />
+    </div>
+    <div class="card">
+      <h3>Copia de seguridad</h3>
+      <p>Exporta o importa todos los meses, créditos y tarjetas de este navegador (<code>finanzas-año-mes</code>).</p>
       <div class="form-grid">
         <div>
           <label>Al importar</label>
@@ -588,67 +774,21 @@
         </div>
       </div>
     </div>
-  </div>
-
-  <div class="card">
-    <h3>Configuración mensual</h3>
-    <input id="salary" type="text" placeholder="$0" />
-  </div>
-
-  <div class="grid">
-    <div class="card summary-card"><h3>Gastos Fijos</h3><div id="totalFixed"></div></div>
-    <div class="card summary-card"><h3>Gastos Variables</h3><div id="totalVariable"></div></div>
-    <div class="card summary-card"><h3>Gastos Totales</h3><div id="totalExpenses"></div></div>
-    <div class="card summary-card"><h3>Ahorros este mes</h3><div id="totalSavings"></div></div>
-    <div class="card summary-card"><h3>Otros ingresos (registrados)</h3><div id="otherIncomes"></div></div>
-    <div class="card summary-card"><h3>Salario + ingresos finalizados</h3><div id="adjustedSalary"></div></div>
-    <div class="card summary-card"><h3>Ahorro general</h3><div id="totalGeneralSavings"></div></div>
-    <div class="card summary-card"><h3>Dinero actual</h3><div id="expectedMoneyDone"></div></div>
-    <div class="card summary-card"><h3>Dinero restante aproximado (mes)</h3><div id="remaining"></div><p id="remainingHint" style="font-size:0.68rem;color:var(--muted);margin:0.35rem 0 0 0;font-weight:500;line-height:1.35;"></p></div>
-  </div>
-
-  <div class="card">
-    <h3>Resumen por etiquetas</h3>
-    <p style="font-size: 0.82rem; color: var(--muted); margin: 0 0 0.5rem 0;">
-      Suma de movimientos del mes por etiqueta (ingresos y gastos de la tabla). Filas sin etiqueta van en «Sin etiqueta».
-    </p>
-    <div id="tagSummary"></div>
-  </div>
-
-  <div class="card">
-    <h3>Movimientos del mes</h3>
-    <div class="toolbar-row">
-      <label for="searchMovements" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Buscar</label>
-      <input id="searchMovements" type="search" placeholder="Buscar: nombre, etiqueta, tipo…" aria-label="Buscar movimientos" />
-
-      <select id="filterDone" style="width:auto;">
-        <option value="all">Todos</option>
-        <option value="done">Solo finalizados</option>
-        <option value="pending" selected>Solo pendientes</option>
-      </select>
-
-      <button type="button" class="btn-secondary" onclick="setAllDone(true)" style="width:auto;white-space:nowrap;">Finalizar todos</button>
-      <button type="button" class="btn-secondary" onclick="setAllDone(false)" style="width:auto;white-space:nowrap;">Desmarcar todos</button>
-      <button type="button" onclick="openMovementModal('add')" style="width:auto;white-space:nowrap;">+ Nuevo movimiento</button>
-    </div>
-    <div class="table-container" style="border: none;">
-    <table class="movements-table">
-      <thead>
-        <tr>
-          <th>Nombre</th><th>Monto</th><th>Movimiento</th><th>Tipo</th><th>Concepto</th><th>Etiquetas</th><th>Creado</th><th>Actualizado</th><th>Fecha fin</th><th>Finalizado</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="expenseTable"></tbody>
-    </table>
-    </div>
-  </div>
+  </section>
 </div>
+
+<nav class="tabbar" aria-label="Secciones">
+  <button type="button" data-tab="dashboard" class="active" aria-selected="true">Resumen</button>
+  <button type="button" data-tab="movements" aria-selected="false">Movimientos</button>
+  <button type="button" data-tab="debts" aria-selected="false">Deudas</button>
+  <button type="button" data-tab="settings" aria-selected="false">Ajustes</button>
+</nav>
 
 <div id="modalCreditsWrap" class="modal-wrap" hidden>
   <div class="modal-scrim" onclick="closeCreditsModal()"></div>
   <div class="modal-dialog modal-wide" role="dialog" aria-modal="true" aria-labelledby="modalCreditsTitle">
     <div class="modal-header">
-      <h2 id="modalCreditsTitle">Créditos activos</h2>
+      <h2 id="modalCreditsTitle">Nuevo crédito</h2>
       <button type="button" class="modal-close" onclick="closeCreditsModal()" aria-label="Cerrar">×</button>
     </div>
     <div class="modal-body">
@@ -692,9 +832,8 @@
       </div>
       <div class="actions" style="margin-top:0.75rem;">
         <button type="button" id="creditSubmitBtn" onclick="submitCreditForm()" style="width:auto;">Agregar crédito</button>
-        <button type="button" id="creditCancelEditBtn" class="btn-secondary" onclick="resetCreditForm()" hidden style="width:auto;">Cancelar edición</button>
+        <button type="button" id="creditCancelEditBtn" class="btn-secondary" onclick="closeCreditsModal()" hidden style="width:auto;">Cancelar</button>
       </div>
-      <div id="creditsList" class="credit-list"></div>
     </div>
   </div>
 </div>
@@ -703,7 +842,7 @@
   <div class="modal-scrim" onclick="closeCardsModal()"></div>
   <div class="modal-dialog modal-wide" role="dialog" aria-modal="true" aria-labelledby="modalCardsTitle">
     <div class="modal-header">
-      <h2 id="modalCardsTitle">Tarjetas de crédito</h2>
+      <h2 id="modalCardsTitle">Nueva tarjeta</h2>
       <button type="button" class="modal-close" onclick="closeCardsModal()" aria-label="Cerrar">×</button>
     </div>
     <div class="modal-body">
@@ -719,7 +858,115 @@
           <button type="button" onclick="submitCard()" style="width:auto;">Agregar tarjeta</button>
         </div>
       </div>
-      <div id="cardsList" class="credit-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="modalPurchaseWrap" class="modal-wrap" hidden>
+  <div class="modal-scrim" onclick="closePurchaseModal()"></div>
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="purchaseTitle">
+    <div class="modal-header">
+      <h2 id="purchaseTitle">Agregar compra</h2>
+      <button type="button" class="modal-close" onclick="closePurchaseModal()" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div>
+          <label for="pConcept">Concepto</label>
+          <input id="pConcept" type="text" placeholder="Ej. Mercado" autocomplete="off" />
+        </div>
+        <div>
+          <label for="pAmount">Cuota</label>
+          <input id="pAmount" type="text" inputmode="numeric" placeholder="$0" />
+        </div>
+        <div>
+          <label for="pBilling">Tipo</label>
+          <select id="pBilling">
+            <option value="installments">A cuotas</option>
+            <option value="monthly">Cada mes</option>
+          </select>
+        </div>
+        <div>
+          <label for="pStartMonth">Desde</label>
+          <select id="pStartMonth">
+            <option value="1">Enero</option>
+            <option value="2">Febrero</option>
+            <option value="3">Marzo</option>
+            <option value="4">Abril</option>
+            <option value="5">Mayo</option>
+            <option value="6">Junio</option>
+            <option value="7">Julio</option>
+            <option value="8">Agosto</option>
+            <option value="9">Septiembre</option>
+            <option value="10">Octubre</option>
+            <option value="11">Noviembre</option>
+            <option value="12">Diciembre</option>
+          </select>
+        </div>
+        <div>
+          <label for="pStartYear">Año inicio</label>
+          <input id="pStartYear" type="number" />
+        </div>
+        <div id="pInstallmentsWrap">
+          <label for="pInstallments">Cuotas</label>
+          <input id="pInstallments" type="number" min="1" placeholder="Ej. 36" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" onclick="closePurchaseModal()">Cancelar</button>
+      <button type="button" onclick="saveCardMovement()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalAbonoWrap" class="modal-wrap" hidden>
+  <div class="modal-scrim" onclick="closeAbonoModal()"></div>
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="abonoTitle">
+    <div class="modal-header">
+      <h2 id="abonoTitle">Registrar abono</h2>
+      <button type="button" class="modal-close" onclick="closeAbonoModal()" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="abonoHint" style="margin:0 0 0.85rem;font-size:0.82rem;color:var(--muted);"></p>
+      <div class="form-grid">
+        <div>
+          <label for="abonoAmount">Abono</label>
+          <input id="abonoAmount" type="text" inputmode="numeric" placeholder="$0" />
+        </div>
+        <div>
+          <label for="abonoMonth">Mes</label>
+          <select id="abonoMonth">
+            <option value="1">Enero</option>
+            <option value="2">Febrero</option>
+            <option value="3">Marzo</option>
+            <option value="4">Abril</option>
+            <option value="5">Mayo</option>
+            <option value="6">Junio</option>
+            <option value="7">Julio</option>
+            <option value="8">Agosto</option>
+            <option value="9">Septiembre</option>
+            <option value="10">Octubre</option>
+            <option value="11">Noviembre</option>
+            <option value="12">Diciembre</option>
+          </select>
+        </div>
+        <div>
+          <label for="abonoYear">Año</label>
+          <input id="abonoYear" type="number" />
+        </div>
+        <div id="abonoModeWrap">
+          <label for="abonoMode">Afecta</label>
+          <select id="abonoMode">
+            <option value="plazo">Plazo</option>
+            <option value="cuota">Cuota</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" onclick="closeAbonoModal()">Cancelar</button>
+      <button type="button" onclick="submitAbonoModal()">Registrar</button>
     </div>
   </div>
 </div>
@@ -1387,7 +1634,6 @@ function openCardsModal() {
 
 function closeCardsModal() {
   document.getElementById('modalCardsWrap').setAttribute('hidden', '');
-  editingCardMovement = null;
 }
 
 function submitCard() {
@@ -1401,28 +1647,54 @@ function submitCard() {
   cards.push({ id: newRecordId(), name, active: true, movements: [] });
   document.getElementById('cardName').value = '';
   saveCards();
+  closeCardsModal();
   renderCardsModal();
 }
 
-function abonoSectionHtml(abonos, attrs, simple) {
-  const period = loadedPeriod() || { year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
-  const rows = (abonos || []).map(a => {
+let abonoDraft = null;
+
+function abonoHistoryHtml(abonos, attrs, simple) {
+  const list = abonos || [];
+  if (!list.length) return '';
+  const total = list.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  const rows = list.map(a => {
     const effect = simple || a.mode === 'abono'
-      ? 'abono'
-      : (a.mode === 'cuota' ? 'baja la cuota' : 'acorta el plazo');
-    return `<div class="meta">${escapeHtml(periodLabel(a.year, a.month))} · ${formatCOP(Number(a.amount) || 0)} · ${effect} <button type="button" class="btn-secondary" data-abono-action="delete" data-abono-id="${escapeHtml(a.id)}" ${attrs}>Quitar</button></div>`;
+      ? 'Pago parcial'
+      : (a.mode === 'cuota' ? 'Baja la cuota' : 'Acorta el plazo');
+    return `<div class="abono-row">
+      <div>
+        <div class="amount">${formatCOP(Number(a.amount) || 0)}</div>
+        <div class="detail">${escapeHtml(periodLabel(a.year, a.month))} · ${escapeHtml(effect)}</div>
+      </div>
+      <button type="button" class="btn-secondary" data-abono-action="delete" data-abono-id="${escapeHtml(a.id)}" ${attrs}>Quitar</button>
+    </div>`;
   }).join('');
-  return `<div class="abono-block" data-abono-form>
-    <div class="meta">${simple ? 'Pago parcial. Se resta del saldo y la cuota del mes sigue igual hasta que se acabe.' : 'Abono extra. Plazo mantiene la cuota y termina antes. Cuota mantiene los meses y baja el valor.'}</div>
-    <div class="form-grid">
-      <div><label>Abono</label><input data-abono-field="amount" type="text" inputmode="numeric" placeholder="$0" /></div>
-      <div><label>Mes</label><select data-abono-field="month">${monthOptions(period.month)}</select></div>
-      <div><label>Año</label><input data-abono-field="year" type="number" value="${period.year}" /></div>
-      ${simple ? '' : `<div><label>Afecta</label><select data-abono-field="mode"><option value="plazo">Plazo</option><option value="cuota">Cuota</option></select></div>`}
-      <div><button type="button" data-abono-action="add" ${attrs}>Registrar abono</button></div>
-    </div>
-    ${rows || '<div class="meta">Sin abonos.</div>'}
+  const countLabel = list.length === 1 ? '1 abono' : `${list.length} abonos`;
+  return `<div class="abono-block">
+    <div class="abono-head"><strong>Abonos</strong><span>${countLabel} · ${formatCOP(total)}</span></div>
+    ${rows}
   </div>`;
+}
+
+function openAbonoModal(kind, ownerId, movementId) {
+  abonoDraft = { kind, ownerId, movementId };
+  const period = loadedPeriod() || { year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
+  const simple = kind === 'purchase';
+  document.getElementById('abonoModeWrap').hidden = simple;
+  document.getElementById('abonoHint').textContent = simple
+    ? 'Pago parcial. Se resta del saldo y la cuota del mes sigue igual hasta que se acabe.'
+    : 'Abono extra. Plazo mantiene la cuota y termina antes. Cuota mantiene los meses y baja el valor.';
+  document.getElementById('abonoAmount').value = '';
+  document.getElementById('abonoMonth').value = String(period.month);
+  document.getElementById('abonoYear').value = period.year;
+  document.getElementById('abonoMode').value = 'plazo';
+  document.getElementById('modalAbonoWrap').removeAttribute('hidden');
+  document.getElementById('abonoAmount').focus();
+}
+
+function closeAbonoModal() {
+  document.getElementById('modalAbonoWrap').setAttribute('hidden', '');
+  abonoDraft = null;
 }
 
 function handleAbonoClick(btn) {
@@ -1434,27 +1706,49 @@ function handleAbonoClick(btn) {
     : ((cards.find(c => c.id === ownerId) || {}).movements || []).find(mv => mv.id === movementId);
   if (!target) return;
   const action = btn.getAttribute('data-abono-action');
-  if (action === 'delete') {
-    target.abonos = (target.abonos || []).filter(a => a.id !== btn.getAttribute('data-abono-id'));
-  } else {
-    const form = btn.closest('[data-abono-form]');
-    const amount = clean(form.querySelector('[data-abono-field="amount"]').value);
-    const month = Number(form.querySelector('[data-abono-field="month"]').value);
-    const year = Number(form.querySelector('[data-abono-field="year"]').value);
-    const modeField = form.querySelector('[data-abono-field="mode"]');
-    const mode = kind === 'purchase' || !modeField
-      ? 'abono'
-      : (modeField.value === 'cuota' ? 'cuota' : 'plazo');
-    if (!amount || !year || !month) return;
-    const spec = kind === 'credit' ? debtSpecFromCredit(target) : debtSpecFromPurchase(target);
-    const preview = projectDebt(spec);
-    if (!preview.schedule.some(row => row.index === periodIndex(year, month))) {
-      alert('Ese mes la deuda ya no tiene cuota.');
-      return;
-    }
-    if (!target.abonos) target.abonos = [];
-    target.abonos.push({ id: newRecordId(), amount, year, month, mode });
+  if (action === 'open') {
+    openAbonoModal(kind, ownerId, movementId);
+    return;
   }
+  if (action !== 'delete') return;
+  target.abonos = (target.abonos || []).filter(a => a.id !== btn.getAttribute('data-abono-id'));
+  if (kind === 'credit') saveCredits();
+  else {
+    expandedCardMoves.add(ownerId);
+    saveCards();
+  }
+  if (currentKey) {
+    if (kind === 'credit') syncActiveCreditExpenses();
+    else syncCardExpenses();
+    render();
+  }
+  if (kind === 'credit') renderCreditsModal();
+  else renderCardsModal();
+}
+
+function submitAbonoModal() {
+  if (!abonoDraft) return;
+  const { kind, ownerId, movementId } = abonoDraft;
+  const target = kind === 'credit'
+    ? credits.find(c => c.id === ownerId)
+    : ((cards.find(c => c.id === ownerId) || {}).movements || []).find(mv => mv.id === movementId);
+  if (!target) return;
+  const amount = clean(document.getElementById('abonoAmount').value);
+  const month = Number(document.getElementById('abonoMonth').value);
+  const year = Number(document.getElementById('abonoYear').value);
+  const mode = kind === 'purchase'
+    ? 'abono'
+    : (document.getElementById('abonoMode').value === 'cuota' ? 'cuota' : 'plazo');
+  if (!amount || !year || !month) return;
+  const spec = kind === 'credit' ? debtSpecFromCredit(target) : debtSpecFromPurchase(target);
+  const preview = projectDebt(spec);
+  if (!preview.schedule.some(row => row.index === periodIndex(year, month))) {
+    alert('Ese mes la deuda ya no tiene cuota.');
+    return;
+  }
+  if (!target.abonos) target.abonos = [];
+  target.abonos.push({ id: newRecordId(), amount, year, month, mode });
+  closeAbonoModal();
   if (kind === 'credit') saveCredits();
   else {
     expandedCardMoves.add(ownerId);
@@ -1506,16 +1800,13 @@ function renderCardsModal() {
           <div class="meta">${formatCOP(shownAmount)} · ${escapeHtml(cuotaLabel)} · ${escapeHtml(detail)}${extraNote}${monthly ? '' : ` · Se debe ${formatCOP(owed)}`}</div>
           <div class="actions" style="margin-top:0.35rem;">
             <button type="button" class="btn-secondary" data-card-action="edit-movement" data-card-id="${escapeHtml(card.id)}" data-movement-id="${escapeHtml(mv.id)}">Editar</button>
+            ${monthly ? '' : `<button type="button" class="btn-secondary" data-abono-action="open" ${abonoAttrs}>Abonar</button>`}
             <button type="button" class="btn-danger" data-card-action="delete-movement" data-card-id="${escapeHtml(card.id)}" data-movement-id="${escapeHtml(mv.id)}">Quitar</button>
           </div>
-          ${monthly ? '' : abonoSectionHtml(mv.abonos, abonoAttrs, true)}
+          ${monthly ? '' : abonoHistoryHtml(mv.abonos, abonoAttrs, true)}
         </div>
       </div>`;
     }).join('');
-    const editing = editingCardMovement && editingCardMovement.cardId === card.id
-      ? (card.movements || []).find(mv => mv.id === editingCardMovement.movementId)
-      : null;
-    const start = editing || period;
     return `<div class="credit-item" data-card-root="${escapeHtml(card.id)}">
       <div style="flex:1 1 220px;">
         <strong>${escapeHtml(card.name)}</strong> ${activeLabel}
@@ -1526,38 +1817,8 @@ function renderCardsModal() {
         <div data-card-moves ${expandedCardMoves.has(card.id) ? '' : 'hidden'}>
           ${moves || '<div class="meta">Sin compras. La cuota de este mes es $0.</div>'}
         </div>
-        <div class="form-grid card-move-form">
-          <div>
-            <label>Concepto</label>
-            <input data-field="concept" type="text" value="${editing ? escapeHtml(editing.concept) : ''}" placeholder="Ej. Mercado" />
-          </div>
-          <div>
-            <label>Cuota</label>
-            <input data-field="amount" type="text" inputmode="numeric" value="${editing ? escapeHtml(formatCOP(Number(editing.amount) || 0)) : ''}" placeholder="$0" />
-          </div>
-          <div>
-            <label>Tipo</label>
-            <select data-field="billing">
-              <option value="installments" ${!editing || editing.billing !== 'monthly' ? 'selected' : ''}>A cuotas</option>
-              <option value="monthly" ${editing && editing.billing === 'monthly' ? 'selected' : ''}>Cada mes</option>
-            </select>
-          </div>
-          <div>
-            <label>Desde</label>
-            <select data-field="startMonth">${monthOptions(start.startMonth || start.month)}</select>
-          </div>
-          <div>
-            <label>Año inicio</label>
-            <input data-field="startYear" type="number" value="${start.startYear || start.year}" />
-          </div>
-          <div data-installments-wrap ${editing && editing.billing === 'monthly' ? 'hidden' : ''}>
-            <label>Cuotas</label>
-            <input data-field="installments" type="number" min="1" value="${editing && editing.billing !== 'monthly' ? movementInstallments(editing) : ''}" placeholder="Ej. 36" />
-          </div>
-        </div>
         <div class="actions" style="margin-top:0.55rem;">
-          <button type="button" data-card-action="save-movement" data-card-id="${escapeHtml(card.id)}">${editing ? 'Guardar compra' : 'Agregar compra'}</button>
-          ${editing ? `<button type="button" class="btn-secondary" data-card-action="cancel-movement" data-card-id="${escapeHtml(card.id)}">Cancelar</button>` : ''}
+          <button type="button" data-card-action="add-movement" data-card-id="${escapeHtml(card.id)}">Agregar compra</button>
           ${omitted ? `<button type="button" data-card-action="include" data-card-id="${escapeHtml(card.id)}">Incluir en este mes</button>` : ''}
           <button type="button" class="btn-secondary" data-card-action="toggle" data-card-id="${escapeHtml(card.id)}">${card.active === false ? 'Activar' : 'Pausar'}</button>
           <button type="button" class="btn-danger" data-card-action="delete-card" data-card-id="${escapeHtml(card.id)}">Eliminar tarjeta</button>
@@ -1567,28 +1828,48 @@ function renderCardsModal() {
   }).join('');
 }
 
-function readCardMovement(root) {
-  const field = name => root.querySelector(`[data-field="${name}"]`);
-  return {
-    concept: field('concept').value.trim(),
-    amount: clean(field('amount').value),
-    startMonth: Number(field('startMonth').value),
-    startYear: Number(field('startYear').value),
-    billing: field('billing').value === 'monthly' ? 'monthly' : 'installments',
-    installments: Number(field('installments').value)
-  };
+function openPurchaseModal(cardId, movementId) {
+  const card = cards.find(c => c.id === cardId);
+  if (!card) return;
+  const editing = movementId ? (card.movements || []).find(mv => mv.id === movementId) : null;
+  if (movementId && !editing) return;
+  editingCardMovement = { cardId, movementId: editing ? editing.id : null };
+  const period = selectedPeriodDefaults();
+  const monthly = editing && editing.billing === 'monthly';
+  document.getElementById('purchaseTitle').textContent = editing ? 'Editar compra' : 'Agregar compra';
+  document.getElementById('pConcept').value = editing ? editing.concept : '';
+  document.getElementById('pAmount').value = editing ? formatCOP(Number(editing.amount) || 0) : '';
+  document.getElementById('pBilling').value = monthly ? 'monthly' : 'installments';
+  document.getElementById('pStartMonth').value = String((editing && editing.startMonth) || period.month);
+  document.getElementById('pStartYear').value = (editing && editing.startYear) || period.year;
+  document.getElementById('pInstallments').value = editing && !monthly ? movementInstallments(editing) : '';
+  document.getElementById('pInstallmentsWrap').hidden = monthly;
+  document.getElementById('modalPurchaseWrap').removeAttribute('hidden');
+  document.getElementById('pConcept').focus();
 }
 
-function saveCardMovement(cardId) {
+function closePurchaseModal() {
+  document.getElementById('modalPurchaseWrap').setAttribute('hidden', '');
+  editingCardMovement = null;
+}
+
+function saveCardMovement() {
+  const cardId = editingCardMovement && editingCardMovement.cardId;
   const card = cards.find(c => c.id === cardId);
-  const root = document.querySelector(`[data-card-root="${CSS.escape(cardId)}"]`);
-  if (!card || !root) return;
-  const data = readCardMovement(root);
+  if (!card) return;
+  const data = {
+    concept: document.getElementById('pConcept').value.trim(),
+    amount: clean(document.getElementById('pAmount').value),
+    startMonth: Number(document.getElementById('pStartMonth').value),
+    startYear: Number(document.getElementById('pStartYear').value),
+    billing: document.getElementById('pBilling').value === 'monthly' ? 'monthly' : 'installments',
+    installments: Number(document.getElementById('pInstallments').value)
+  };
   if (!data.concept || !data.amount || !data.startYear || !data.startMonth) return;
   if (data.billing !== 'monthly' && (!data.installments || data.installments < 1)) return;
   if (data.billing === 'monthly') delete data.installments;
   expandedCardMoves.add(cardId);
-  const editing = editingCardMovement && editingCardMovement.cardId === cardId
+  const editing = editingCardMovement.movementId
     ? (card.movements || []).find(mv => mv.id === editingCardMovement.movementId)
     : null;
   if (editing) {
@@ -1597,7 +1878,7 @@ function saveCardMovement(cardId) {
     delete editing.endMonth;
     if (data.billing === 'monthly') delete editing.installments;
   } else card.movements.push({ id: newRecordId(), ...data });
-  editingCardMovement = null;
+  closePurchaseModal();
   saveCards();
   if (currentKey) {
     syncCardExpenses();
@@ -1662,6 +1943,7 @@ function resetCreditForm() {
 
 function openCreditsModal() {
   resetCreditForm();
+  document.getElementById('modalCreditsTitle').textContent = 'Nuevo crédito';
   const hint = document.getElementById('creditsHint');
   const period = loadedPeriod();
   if (period) {
@@ -1669,7 +1951,6 @@ function openCreditsModal() {
   } else {
     hint.textContent = 'Carga un mes para insertar las cuotas. Cada crédito activo se suma como gasto fijo del salario desde el mes de inicio.';
   }
-  renderCreditsModal();
   document.getElementById('modalCreditsWrap').removeAttribute('hidden');
   document.getElementById('cName').focus();
 }
@@ -1751,6 +2032,7 @@ function renderCreditsModal() {
     const leftLabel = `Faltan ${progress.remainingCount} ${progress.remainingCount === 1 ? 'cuota' : 'cuotas'}`;
     const actions = [
       `<button type="button" class="btn-secondary" data-credit-action="edit" data-credit-id="${escapeHtml(c.id)}">Editar</button>`,
+      `<button type="button" class="btn-secondary" data-abono-action="open" data-abono-kind="credit" data-owner-id="${escapeHtml(c.id)}">Abonar</button>`,
       `<button type="button" class="btn-secondary" data-credit-action="toggle" data-credit-id="${escapeHtml(c.id)}">${c.active === false ? 'Activar' : 'Pausar'}</button>`,
       omitted ? `<button type="button" data-credit-action="include" data-credit-id="${escapeHtml(c.id)}">Incluir en este mes</button>` : '',
       `<button type="button" class="btn-danger" data-credit-action="delete" data-credit-id="${escapeHtml(c.id)}">Eliminar</button>`
@@ -1763,7 +2045,7 @@ function renderCreditsModal() {
         <div class="meta">${escapeHtml(cuotaLabel)} · ${escapeHtml(paidLabel)}</div>
         <div class="meta">${escapeHtml(leftLabel)}</div>
         ${omitted ? '<div class="meta">Omitida en el mes cargado</div>' : ''}
-        ${abonoSectionHtml(c.abonos, `data-abono-kind="credit" data-owner-id="${escapeHtml(c.id)}"`)}
+        ${abonoHistoryHtml(c.abonos, `data-abono-kind="credit" data-owner-id="${escapeHtml(c.id)}"`)}
       </div>
       <div class="actions">${actions}</div>
     </div>`;
@@ -1803,7 +2085,7 @@ function submitCreditForm() {
     credits.push({ id, name, amount, startYear, startMonth, installments, active: true });
   }
   saveCredits();
-  resetCreditForm();
+  closeCreditsModal();
   if (currentKey) {
     syncActiveCreditExpenses();
     render();
@@ -1822,6 +2104,8 @@ function editCredit(id) {
   document.getElementById('cInstallments').value = credit.installments || '';
   document.getElementById('creditSubmitBtn').textContent = 'Guardar cambios';
   document.getElementById('creditCancelEditBtn').hidden = false;
+  document.getElementById('modalCreditsTitle').textContent = 'Editar crédito';
+  document.getElementById('modalCreditsWrap').removeAttribute('hidden');
   document.getElementById('cName').focus();
 }
 
@@ -2020,12 +2304,9 @@ document.getElementById("cardsList").addEventListener("click", ev => {
   const cardId = btn.getAttribute("data-card-id");
   const movementId = btn.getAttribute("data-movement-id");
   const action = btn.getAttribute("data-card-action");
-  if (action === "save-movement") saveCardMovement(cardId);
-  else if (action === "edit-movement") {
-    editingCardMovement = { cardId, movementId };
-    expandedCardMoves.add(cardId);
-    renderCardsModal();
-  } else if (action === "toggle-moves") {
+  if (action === "add-movement") openPurchaseModal(cardId);
+  else if (action === "edit-movement") openPurchaseModal(cardId, movementId);
+  else if (action === "toggle-moves") {
     if (expandedCardMoves.has(cardId)) expandedCardMoves.delete(cardId);
     else expandedCardMoves.add(cardId);
     const root = btn.closest("[data-card-root]");
@@ -2036,9 +2317,6 @@ document.getElementById("cardsList").addEventListener("click", ev => {
     btn.setAttribute("aria-expanded", open ? "true" : "false");
     const count = (cards.find(c => c.id === cardId)?.movements || []).length;
     btn.textContent = `${open ? "Ocultar compras" : "Mostrar compras"} (${count})`;
-  } else if (action === "cancel-movement") {
-    editingCardMovement = null;
-    renderCardsModal();
   } else if (action === "delete-movement") openCardMovementDelete(cardId, movementId);
   else if (action === "delete-card") openCardDelete(cardId);
   else if (action === "toggle") {
@@ -2060,44 +2338,47 @@ document.getElementById("cardsList").addEventListener("click", ev => {
   }
 });
 
-document.getElementById("cardsList").addEventListener("change", ev => {
-  if (ev.target.getAttribute("data-field") !== "billing") return;
-  const wrap = ev.target.closest("[data-card-root]").querySelector("[data-installments-wrap]");
-  if (wrap) wrap.hidden = ev.target.value === "monthly";
+document.getElementById("pBilling").addEventListener("change", ev => {
+  document.getElementById("pInstallmentsWrap").hidden = ev.target.value === "monthly";
 });
 
-document.getElementById("creditsList").addEventListener("input", ev => {
-  if (ev.target.getAttribute("data-abono-field") === "amount") {
-    ev.target.value = formatCOP(clean(ev.target.value));
-  }
+document.getElementById("pAmount").addEventListener("input", ev => {
+  ev.target.value = formatCOP(clean(ev.target.value));
 });
 
-document.getElementById("cardsList").addEventListener("input", ev => {
-  if (ev.target.getAttribute("data-field") === "amount" || ev.target.getAttribute("data-abono-field") === "amount") {
-    ev.target.value = formatCOP(clean(ev.target.value));
-  }
+document.getElementById("abonoAmount").addEventListener("input", ev => {
+  ev.target.value = formatCOP(clean(ev.target.value));
 });
 
-document.getElementById("backupToggle").addEventListener("click", () => {
-  const body = document.getElementById("backupBody");
-  const btn = document.getElementById("backupToggle");
-  const isHidden = body.hasAttribute("hidden");
-  if (isHidden) {
-    body.removeAttribute("hidden");
-    btn.setAttribute("aria-expanded", "true");
-  } else {
-    body.setAttribute("hidden", "");
-    btn.setAttribute("aria-expanded", "false");
-  }
+document.querySelector(".tabbar").addEventListener("click", ev => {
+  const btn = ev.target.closest("[data-tab]");
+  if (!btn) return;
+  showTab(btn.getAttribute("data-tab"));
 });
+
+function showTab(name) {
+  document.querySelectorAll("[data-tab-panel]").forEach(panel => {
+    if (panel.getAttribute("data-tab-panel") === name) panel.removeAttribute("hidden");
+    else panel.setAttribute("hidden", "");
+  });
+  document.querySelectorAll("[data-tab]").forEach(btn => {
+    const on = btn.getAttribute("data-tab") === name;
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-selected", on ? "true" : "false");
+  });
+}
 
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
   const move = document.getElementById("modalMovementWrap");
   const del = document.getElementById("modalDeleteWrap");
+  const purchase = document.getElementById("modalPurchaseWrap");
+  const abono = document.getElementById("modalAbonoWrap");
   const creditsModal = document.getElementById("modalCreditsWrap");
   if (!del.hasAttribute("hidden")) closeDeleteModal();
   else if (!move.hasAttribute("hidden")) closeMovementModal();
+  else if (abono && !abono.hasAttribute("hidden")) closeAbonoModal();
+  else if (purchase && !purchase.hasAttribute("hidden")) closePurchaseModal();
   else if (creditsModal && !creditsModal.hasAttribute("hidden")) closeCreditsModal();
   else if (document.getElementById("modalCardsWrap") && !document.getElementById("modalCardsWrap").hasAttribute("hidden")) closeCardsModal();
 });
@@ -2272,17 +2553,24 @@ function getGeneralSavings(){
   return general;
 }
 
+function savingsText(alloc, withdraw) {
+  return withdraw ? `${formatCOP(alloc)} · Retiros: ${formatCOP(withdraw)}` : formatCOP(alloc);
+}
+
 function render(){
-  let f=0,v=0,s=0,sAlloc=0,sWithdraw=0,fRem=0,vRem=0, doneFromSalary=0, otherIncomesTotal=0, doneIncomes=0;
+  let f=0,v=0,sAllocAll=0,sWithdrawAll=0,fDone=0,vDone=0,sAlloc=0,sWithdraw=0, doneFromSalary=0, otherIncomesTotal=0, doneIncomes=0;
   let sumIncomeRows = 0, sumExpenseRows = 0;
   const tagBuckets = {};
   const NONE_KEY = '__sin_etiqueta__';
 
-  function bumpTag(label, amount, isIncome) {
+  function bumpTag(label, amount, isIncome, done) {
     const key = label.trim().toLowerCase();
-    if (!tagBuckets[key]) tagBuckets[key] = { label: label.trim(), income: 0, expense: 0 };
+    if (!tagBuckets[key]) tagBuckets[key] = { label: label.trim(), income: 0, expense: 0, expenseDone: 0 };
     if (isIncome) tagBuckets[key].income += amount;
-    else tagBuckets[key].expense += amount;
+    else {
+      tagBuckets[key].expense += amount;
+      if (done) tagBuckets[key].expenseDone += amount;
+    }
   }
 
   const searchQ = (document.getElementById('searchMovements') && document.getElementById('searchMovements').value || '').trim().toLowerCase();
@@ -2295,30 +2583,40 @@ function render(){
 
     if(movement === 'income'){
       sumIncomeRows += amt;
-      otherIncomesTotal += e.amount;
-      if(e.done) doneIncomes += e.amount;
+      otherIncomesTotal += amt;
+      if(e.done) doneIncomes += amt;
     } else {
       sumExpenseRows += amt;
-      if(e.type==='fixed'){ f+=e.amount; if(concept==='salary' && e.done) fRem+=e.amount; }
-      if(e.type==='variable'){ v+=e.amount; if(concept==='salary' && e.done) vRem+=e.amount; }
+      if(e.type==='fixed'){ f+=amt; if(e.done) fDone+=amt; }
+      if(e.type==='variable'){ v+=amt; if(e.done) vDone+=amt; }
       if(e.type==='saving'){
-        s+=e.amount;
-        if(concept==='salary' && e.done) sAlloc+=e.amount;
-        if(concept==='saving' && e.done) sWithdraw+=e.amount;
+        if(concept==='saving') {
+          sWithdrawAll += amt;
+          if(e.done) sWithdraw += amt;
+        } else {
+          sAllocAll += amt;
+          if(e.done) sAlloc += amt;
+        }
       }
-      if(e.done && concept==='salary')doneFromSalary+=e.amount;
+      if(e.done && concept==='salary') doneFromSalary += amt;
     }
 
     const tags = getTagsArray(e);
     if (tags.length === 0) {
-      bumpTag(NONE_KEY, amt, movement === 'income');
+      bumpTag(NONE_KEY, amt, movement === 'income', !!e.done);
       tagBuckets[NONE_KEY].label = 'Sin etiqueta';
     } else {
-      tags.forEach(t => bumpTag(t, amt, movement === 'income'));
+      tags.forEach(t => bumpTag(t, amt, movement === 'income', !!e.done));
     }
   });
 
+  const estFixed = f - fDone;
+  const estVariable = v - vDone;
+  const estSaveAlloc = sAllocAll - sAlloc;
+  const estSaveWithdraw = sWithdrawAll - sWithdraw;
+  const estIncomes = otherIncomesTotal - doneIncomes;
   const adjustedSalary = salary + doneIncomes;
+  const estimatedSalary = salary + estIncomes;
   const remainingApprox = (Number(salary) || 0) + sumIncomeRows - sumExpenseRows;
 
   const tagRows = Object.keys(tagBuckets)
@@ -2334,11 +2632,12 @@ function render(){
   } else {
     tagSummaryEl.innerHTML = `
       <table class="tag-summary-table">
-        <thead><tr><th>Etiqueta</th><th class="num">Gastos</th></tr></thead>
+        <thead><tr><th>Etiqueta</th><th class="num">Estimado</th><th class="num">Actual</th></tr></thead>
         <tbody>
           ${tagRows.map(r => `<tr>
             <td>${escapeHtml(r.label)}</td>
-            <td class="num">${formatCOP(r.expense)}</td>
+            <td class="num">${formatCOP((r.expense || 0) - (r.expenseDone || 0))}</td>
+            <td class="num">${formatCOP(r.expenseDone || 0)}</td>
           </tr>`).join('')}
         </tbody>
       </table>`;
@@ -2357,11 +2656,14 @@ function render(){
     const concept = e.concept != null ? e.concept : 'salary';
     const tagsHtml = getTagsArray(e).map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('') || '—';
 
+    const kindClass = movement === 'income' ? 'mov-income' : 'mov-expense';
+    const kindPill = movement === 'income' ? 'kind-income' : 'kind-expense';
+
     table.innerHTML+=`
-      <tr class="${e.done?'done':''}">
+      <tr class="${e.done?'done':''} ${kindClass}">
         <td>${escapeHtml(e.name)}${e.creditId ? ' <span class="tag-pill">cuota</span>' : ''}${e.cardId ? ' <span class="tag-pill">tarjeta</span>' : ''}</td>
         <td>${formatCOP(e.amount)}</td>
-        <td>${translations[movement]}</td>
+        <td><span class="kind-pill ${kindPill}">${translations[movement]}</span></td>
         <td>${translations[e.type]}</td>
         <td>${translations[concept]}</td>
         <td>${tagsHtml}</td>
@@ -2376,27 +2678,68 @@ function render(){
       </tr>`;
   });
 
-  document.getElementById('totalFixed').innerText=formatCOP(f);
-  document.getElementById('totalVariable').innerText=formatCOP(v);
-  document.getElementById('totalExpenses').innerText=formatCOP(f+v);
-  document.getElementById('totalSavings').innerText=
-    sWithdraw ? `${formatCOP(sAlloc)} · Retiros: ${formatCOP(sWithdraw)}` : formatCOP(sAlloc);
-  document.getElementById('otherIncomes').innerText=formatCOP(otherIncomesTotal);
+  document.getElementById('totalFixed').innerText=formatCOP(estFixed);
+  document.getElementById('totalVariable').innerText=formatCOP(estVariable);
+  document.getElementById('totalExpenses').innerText=formatCOP(estFixed+estVariable);
+  document.getElementById('totalSavings').innerText=savingsText(estSaveAlloc, estSaveWithdraw);
+  document.getElementById('otherIncomes').innerText=formatCOP(estIncomes);
+  document.getElementById('estimatedSalary').innerText=formatCOP(estimatedSalary);
+  document.getElementById('doneFixed').innerText=formatCOP(fDone);
+  document.getElementById('doneVariable').innerText=formatCOP(vDone);
+  document.getElementById('doneExpenses').innerText=formatCOP(fDone+vDone);
+  document.getElementById('doneSavings').innerText=savingsText(sAlloc, sWithdraw);
+  document.getElementById('doneIncomes').innerText=formatCOP(doneIncomes);
   document.getElementById('adjustedSalary').innerText=formatCOP(adjustedSalary);
   document.getElementById('totalGeneralSavings').innerText=formatCOP(getGeneralSavings());
   document.getElementById('expectedMoneyDone').innerText=formatCOP((salary + doneIncomes)-doneFromSalary);
   document.getElementById('remaining').innerText=formatCOP(remainingApprox);
   const hint = document.getElementById('remainingHint');
   if (hint) {
-    hint.textContent = `Salario del mes + suma ingresos en tabla (${formatCOP(sumIncomeRows)}) − suma gastos en tabla (${formatCOP(sumExpenseRows)}). No usa «Finalizado».`;
+    hint.textContent = `Salario + ingresos creados (${formatCOP(sumIncomeRows)}) − gastos creados (${formatCOP(sumExpenseRows)}).`;
   }
-  document.getElementById("filterDone").addEventListener("change", () => render());
+  renderDashboard(estFixed, estVariable, estSaveAlloc, fDone, vDone, sAlloc, tagRows);
+  renderCreditsModal();
+  renderCardsModal();
 }
 
+function renderDashboard(fixed, variable, savings, doneFixed, doneVariable, doneSavings, tagRows) {
+  const mix = document.getElementById("mixChart");
+  const items = [
+    ["Fijos estimados", fixed],
+    ["Fijos actuales", doneFixed],
+    ["Variables estimados", variable],
+    ["Variables actuales", doneVariable],
+    ["Ahorro estimado", savings],
+    ["Ahorro actual", doneSavings]
+  ];
+  const max = Math.max(...items.map(item => item[1]), 1);
+  mix.innerHTML = items.map(([label, value]) => `
+    <div class="bar-row">
+      <span>${escapeHtml(label)}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round((value / max) * 100)}%"></div></div>
+      <strong>${formatCOP(value)}</strong>
+    </div>`).join("");
+  const tagChart = document.getElementById("tagChart");
+  const rows = tagRows.filter(row => row.expense > 0);
+  const tagMax = Math.max(...rows.map(row => row.expense), 1);
+  tagChart.innerHTML = rows.length
+    ? rows.map(row => `
+      <div class="bar-row">
+        <span>${escapeHtml(row.label)}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round((row.expense / tagMax) * 100)}%"></div></div>
+        <strong>${formatCOP(row.expense)}</strong>
+      </div>`).join("")
+    : "";
+}
+
+document.getElementById("filterDone").addEventListener("change", () => render());
+
+const now = new Date();
+document.getElementById("year").value = now.getFullYear();
+document.getElementById("month").value = String(now.getMonth() + 1);
 loadCredits();
-updateCreditsButton();
 loadCards();
-updateCardsButton();
+loadData();
 </script>
 </body>
 </html>
