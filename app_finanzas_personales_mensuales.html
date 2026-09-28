@@ -4,22 +4,108 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Finanzas Mensuales</title>
+  <script>
+    try {
+      if (localStorage.getItem("finanzasTheme") === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    } catch (_) {}
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet" />
   <style>
     :root {
+      color-scheme: light;
       --bg: #f4f6fb;
+      --bg-mid: #eef1f9;
+      --bg-end: #e8ecf6;
       --surface: #ffffff;
       --text: #1a1f2e;
       --muted: #5c6478;
       --accent: #3d6ee8;
       --accent-soft: #e8efff;
+      --accent-ink: #1e3a8a;
       --border: #e2e6ef;
       --success: #0d9f6e;
       --warn-bg: #fff8e6;
       --radius: 12px;
       --shadow: 0 4px 24px rgba(26, 31, 46, 0.06);
+      --hover: #fafbfd;
+      --soft: #f8f9fc;
+      --header-end: #dfe8ff;
+      --header-line: #c7d7ff;
+      --close-bg: #f0f2f7;
+      --close-hover: #e4e7ef;
+      --footer-bg: #fafbfd;
+      --secondary-bg: #eef0f5;
+      --secondary-hover: #e2e5ed;
+      --item-bg: #fafbfd;
+      --abono-border: #d9e3fb;
+      --abono-bg: #f4f7ff;
+      --abono-line: #e3eaf8;
+      --pill-muted-bg: #f0f2f7;
+      --pill-ok-bg: #e7f7f1;
+      --pill-ok-ink: #0d7a56;
+      --expense-bg: #f6ecec;
+      --expense-ink: #8a4545;
+      --income-bg: #e8f4ee;
+      --income-ink: #246b4a;
+      --expense-border: #c98989;
+      --income-border: #6aab8a;
+      --expense-card-border: #e4c8c8;
+      --income-card-border: #c5ddd0;
+      --est-border: #c5d4fb;
+      --act-border: #b7e4d4;
+      --bar-track: #eef1f8;
+      --tabbar: rgba(255, 255, 255, 0.96);
+      --tab-hover: #f4f6fb;
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #12151c;
+      --bg-mid: #161a22;
+      --bg-end: #1a1f2a;
+      --surface: #1c212c;
+      --text: #e7ebf3;
+      --muted: #a3abbd;
+      --accent: #7ea2ff;
+      --accent-soft: #243044;
+      --accent-ink: #d6e2ff;
+      --border: #2e3546;
+      --success: #3dbe8c;
+      --warn-bg: #3a3218;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+      --hover: #262c3a;
+      --soft: #232937;
+      --header-end: #1c2738;
+      --header-line: #3a4d73;
+      --close-bg: #2a3142;
+      --close-hover: #343c50;
+      --footer-bg: #181d27;
+      --secondary-bg: #2a3142;
+      --secondary-hover: #343c50;
+      --item-bg: #222836;
+      --abono-border: #31405f;
+      --abono-bg: #1e2636;
+      --abono-line: #2c3a52;
+      --pill-muted-bg: #2a3142;
+      --pill-ok-bg: #163528;
+      --pill-ok-ink: #8fd9b8;
+      --expense-bg: #3a2828;
+      --expense-ink: #e7b4b4;
+      --income-bg: #163528;
+      --income-ink: #8fd9b8;
+      --expense-border: #a86d6d;
+      --income-border: #4f8f72;
+      --expense-card-border: #5a3d3d;
+      --income-card-border: #2d5344;
+      --est-border: #3a4d73;
+      --act-border: #245744;
+      --bar-track: #2a3142;
+      --tabbar: rgba(18, 21, 28, 0.94);
+      --tab-hover: #262c3a;
     }
 
     * { box-sizing: border-box; }
@@ -28,7 +114,7 @@
       font-family: "DM Sans", system-ui, sans-serif;
       margin: 0;
       min-height: 100vh;
-      background: linear-gradient(165deg, var(--bg) 0%, #eef1f9 50%, #e8ecf6 100%);
+      background: linear-gradient(165deg, var(--bg) 0%, var(--bg-mid) 50%, var(--bg-end) 100%);
       color: var(--text);
       line-height: 1.45;
       padding: clamp(0.75rem, 3vw, 1.5rem);
@@ -75,7 +161,7 @@
       padding: 0.15rem 0.4rem;
       border-radius: 4px;
       background: var(--accent-soft);
-      color: #1e3a8a;
+      color: var(--accent-ink);
     }
 
     .form-grid {
@@ -106,6 +192,7 @@
       font-family: inherit;
       font-size: 0.95rem;
       background: var(--surface);
+      color: var(--text);
       transition: border-color 0.15s, box-shadow 0.15s;
     }
 
@@ -160,8 +247,8 @@
     .dash-group { margin: 0.2rem 0 0.15rem; font-size: 1.05rem; }
     .dash-group.act { margin-top: 1.1rem; }
     .dash-note { margin: 0 0 0.6rem; font-size: 0.78rem; color: var(--muted); }
-    .summary-card.est { border-color: #c5d4fb; }
-    .summary-card.act { border-color: #b7e4d4; }
+    .summary-card.est { border-color: var(--est-border); }
+    .summary-card.act { border-color: var(--act-border); }
 
     .total { font-size: 18px; font-weight: bold; }
 
@@ -189,17 +276,17 @@
     }
 
     th {
-      background: linear-gradient(180deg, var(--accent-soft) 0%, #dfe8ff 100%);
-      color: #1e3a8a;
+      background: linear-gradient(180deg, var(--accent-soft) 0%, var(--header-end) 100%);
+      color: var(--accent-ink);
       font-weight: 600;
       font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      border-bottom: 2px solid #c7d7ff;
+      border-bottom: 2px solid var(--header-line);
     }
 
     tbody tr { background: var(--surface); }
-    tbody tr:hover { background: #fafbfd; }
+    tbody tr:hover { background: var(--hover); }
 
     .actions { display: flex; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
     .actions button {
@@ -216,7 +303,7 @@
       padding: 0.15rem 0.45rem;
       border-radius: 6px;
       background: var(--accent-soft);
-      color: #1e3a8a;
+      color: var(--accent-ink);
       margin: 0.1rem 0.2rem 0.1rem 0;
     }
 
@@ -232,7 +319,7 @@
     }
     .tag-summary-table th {
       text-align: left;
-      background: #f8f9fc;
+      background: var(--soft);
       font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 0.04em;
@@ -264,7 +351,7 @@
       transition: background 0.15s;
     }
     .collapsible-card .collapsible-trigger:hover {
-      background: #f8f9fc;
+      background: var(--soft);
       transform: none;
       box-shadow: none;
     }
@@ -334,12 +421,12 @@
       border-radius: 8px;
       font-size: 1.35rem;
       line-height: 1;
-      background: #f0f2f7;
+      background: var(--close-bg);
       color: var(--muted);
       box-shadow: none;
     }
     .modal-close:hover {
-      background: #e4e7ef;
+      background: var(--close-hover);
       color: var(--text);
       transform: none;
       box-shadow: none;
@@ -352,15 +439,15 @@
       gap: 0.5rem;
       padding: 1rem 1.15rem;
       border-top: 1px solid var(--border);
-      background: #fafbfd;
+      background: var(--footer-bg);
     }
     .btn-secondary {
-      background: #eef0f5 !important;
+      background: var(--secondary-bg) !important;
       color: var(--text) !important;
       box-shadow: none !important;
     }
     .btn-secondary:hover {
-      background: #e2e5ed !important;
+      background: var(--secondary-hover) !important;
       transform: translateY(-1px);
     }
     .btn-danger {
@@ -390,7 +477,7 @@
       padding: 0.65rem 0.75rem;
       border: 1px solid var(--border);
       border-radius: 8px;
-      background: #fafbfd;
+      background: var(--item-bg);
     }
     .credit-item strong { font-size: 0.92rem; }
     .credit-item .owed { font-size: 0.95rem; font-weight: 700; margin-top: 0.25rem; }
@@ -422,9 +509,9 @@
       flex: 1 1 100%;
       margin-top: 0.75rem;
       padding: 0.7rem 0.75rem 0.35rem;
-      border: 1px solid #d9e3fb;
+      border: 1px solid var(--abono-border);
       border-radius: 10px;
-      background: #f4f7ff;
+      background: var(--abono-bg);
     }
     .abono-head {
       display: flex;
@@ -441,7 +528,7 @@
       justify-content: space-between;
       gap: 0.65rem;
       padding: 0.55rem 0;
-      border-top: 1px solid #e3eaf8;
+      border-top: 1px solid var(--abono-line);
     }
     .abono-row .amount {
       font-size: 0.95rem;
@@ -451,8 +538,8 @@
     .abono-row .detail { margin-top: 0.1rem; font-size: 0.78rem; color: var(--muted); }
     .abono-row button { width: auto; padding: 0.32rem 0.6rem; font-size: 0.75rem; }
     .credit-empty { margin: 0.85rem 0 0; font-size: 0.85rem; color: var(--muted); }
-    .tag-pill.tag-muted { background: #f0f2f7; color: var(--muted); }
-    .tag-pill.tag-ok { background: #e7f7f1; color: #0d7a56; }
+    .tag-pill.tag-muted { background: var(--pill-muted-bg); color: var(--muted); }
+    .tag-pill.tag-ok { background: var(--pill-ok-bg); color: var(--pill-ok-ink); }
     .kind-pill {
       display: inline-block;
       font-size: 0.68rem;
@@ -460,10 +547,66 @@
       padding: 0.12rem 0.45rem;
       border-radius: 6px;
     }
-    .kind-expense { background: #f6ecec; color: #8a4545; }
-    .kind-income { background: #e8f4ee; color: #246b4a; }
-    tr.mov-expense td:first-child { border-left: 3px solid #c98989; }
-    tr.mov-income td:first-child { border-left: 3px solid #6aab8a; }
+    .kind-expense { background: var(--expense-bg); color: var(--expense-ink); }
+    .kind-income { background: var(--income-bg); color: var(--income-ink); }
+    tr.mov-expense td:first-child { border-left: 3px solid var(--expense-border); }
+    tr.mov-income td:first-child { border-left: 3px solid var(--income-border); }
+    .move-list { display: flex; flex-direction: column; gap: 0.65rem; }
+    .move-card {
+      border: 1px solid var(--border);
+      border-left-width: 3px;
+      border-radius: 12px;
+      background: var(--surface);
+      padding: 0.75rem 0.85rem 0.7rem;
+    }
+    .move-card.mov-expense { border-left-color: var(--expense-border); }
+    .move-card.mov-income { border-left-color: var(--income-border); }
+    .move-main {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    .move-title { font-size: 0.98rem; }
+    .move-card.is-done .move-title { text-decoration: line-through; opacity: 0.55; }
+    .move-amount {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .move-detail {
+      margin-top: 0.45rem;
+      display: grid;
+      gap: 0.2rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .move-list.zen .move-detail,
+    .move-list.zen .kind-pill,
+    .move-list.zen .move-main .tag-pill { display: none; }
+    .move-actions {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.7rem;
+      padding-top: 0.65rem;
+      border-top: 1px solid var(--border);
+    }
+    .move-actions button {
+      flex: 1 1 0;
+      width: auto;
+      min-width: 0;
+      padding: 0.48rem 0.35rem;
+      font-size: 0.78rem;
+    }
+    .btn-mark {
+      background: var(--pill-ok-bg) !important;
+      color: var(--pill-ok-ink) !important;
+      box-shadow: none !important;
+    }
+    .btn-mark.is-done {
+      background: var(--secondary-bg) !important;
+      color: var(--text) !important;
+    }
 
     /* Responsive: solo tabla de movimientos (no afecta tag-summary-table ni otras tablas) */
     .tabbar {
@@ -474,7 +617,7 @@
       z-index: 30;
       display: flex;
       gap: 0.2rem;
-      background: rgba(255, 255, 255, 0.96);
+      background: var(--tabbar);
       border-top: 1px solid var(--border);
       padding: 0.35rem 0.35rem calc(0.35rem + env(safe-area-inset-bottom));
       backdrop-filter: blur(8px);
@@ -491,9 +634,9 @@
     }
     .tabbar button.active {
       background: var(--accent-soft);
-      color: #1e3a8a;
+      color: var(--accent-ink);
     }
-    .tabbar button:hover { transform: none; box-shadow: none; background: #f4f6fb; }
+    .tabbar button:hover { transform: none; box-shadow: none; background: var(--tab-hover); }
     .tab-panel[hidden] { display: none !important; }
     .section-head {
       display: flex;
@@ -512,9 +655,58 @@
       margin: 0.35rem 0;
       font-size: 0.78rem;
     }
-    .bar-track { height: 8px; background: #eef1f8; border-radius: 99px; overflow: hidden; }
+    .bar-track { height: 8px; background: var(--bar-track); border-radius: 99px; overflow: hidden; }
     .bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #6d93f5); border-radius: 99px; }
     .bar-row strong { font-variant-numeric: tabular-nums; font-size: 0.75rem; }
+
+    .theme-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .theme-row strong { font-size: 0.95rem; }
+    .theme-row p { margin: 0.15rem 0 0; }
+    .switch {
+      position: relative;
+      width: 2.8rem;
+      height: 1.6rem;
+      flex: 0 0 auto;
+    }
+    .switch input {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 1;
+    }
+    .switch span {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 999px;
+      background: var(--secondary-bg);
+      border: 1px solid var(--border);
+    }
+    .switch span::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 1.15rem;
+      height: 1.15rem;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      transition: transform 0.15s;
+    }
+    .switch input:checked + span { background: var(--accent); border-color: var(--accent); }
+    .switch input:checked + span::after { transform: translateX(1.15rem); }
+    .switch input:focus-visible + span { box-shadow: 0 0 0 3px var(--accent-soft); }
 
     @media (max-width: 768px) {
       .form-grid > * { flex: 1 1 100%; }
@@ -539,12 +731,12 @@
         border: 1px solid var(--border);
       }
       table.movements-table tr.mov-expense {
-        border-color: #e4c8c8;
-        box-shadow: inset 3px 0 0 #c98989;
+        border-color: var(--expense-card-border);
+        box-shadow: inset 3px 0 0 var(--expense-border);
       }
       table.movements-table tr.mov-income {
-        border-color: #c5ddd0;
-        box-shadow: inset 3px 0 0 #6aab8a;
+        border-color: var(--income-card-border);
+        box-shadow: inset 3px 0 0 var(--income-border);
       }
       table.movements-table tr.mov-expense td:first-child,
       table.movements-table tr.mov-income td:first-child { border-left: none; }
@@ -714,18 +906,10 @@
         </select>
         <button type="button" class="btn-secondary" onclick="setAllDone(true)" style="width:auto;white-space:nowrap;">Finalizar todos</button>
         <button type="button" class="btn-secondary" onclick="setAllDone(false)" style="width:auto;white-space:nowrap;">Desmarcar todos</button>
+        <button type="button" class="btn-secondary" id="toggleMoveDetail" style="width:auto;white-space:nowrap;">Ocultar detalle</button>
         <button type="button" onclick="openMovementModal('add')" style="width:auto;white-space:nowrap;">+ Nuevo movimiento</button>
       </div>
-      <div class="table-container" style="border: none;">
-        <table class="movements-table">
-          <thead>
-            <tr>
-              <th>Nombre</th><th>Monto</th><th>Movimiento</th><th>Tipo</th><th>Concepto</th><th>Etiquetas</th><th>Creado</th><th>Actualizado</th><th>Fecha fin</th><th>Finalizado</th><th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="expenseTable"></tbody>
-        </table>
-      </div>
+      <div id="expenseList" class="move-list"></div>
     </div>
   </section>
 
@@ -749,6 +933,19 @@
   </section>
 
   <section data-tab-panel="settings" class="tab-panel" hidden>
+    <div class="card">
+      <h3>Apariencia</h3>
+      <div class="theme-row">
+        <div>
+          <strong>Modo oscuro</strong>
+          <p>Se guarda en este navegador.</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="themeToggle" aria-label="Modo oscuro" />
+          <span></span>
+        </label>
+      </div>
+    </div>
     <div class="card">
       <h3>Salario base</h3>
       <label for="salary">Salario del mes cargado</label>
@@ -2643,7 +2840,7 @@ function render(){
       </table>`;
   }
 
-  const table = document.getElementById('expenseTable');
+  const table = document.getElementById('expenseList');
   table.innerHTML='';
 
   expenses.forEach((e,i)=>{
@@ -2654,29 +2851,38 @@ function render(){
 
     const movement = e.movement || 'expense';
     const concept = e.concept != null ? e.concept : 'salary';
-    const tagsHtml = getTagsArray(e).map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('') || '—';
+    const tags = getTagsArray(e);
+    const tagsHtml = tags.map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('');
 
     const kindClass = movement === 'income' ? 'mov-income' : 'mov-expense';
     const kindPill = movement === 'income' ? 'kind-income' : 'kind-expense';
+    const doneLabel = e.done ? 'Desmarcar' : 'Finalizar';
 
     table.innerHTML+=`
-      <tr class="${e.done?'done':''} ${kindClass}">
-        <td>${escapeHtml(e.name)}${e.creditId ? ' <span class="tag-pill">cuota</span>' : ''}${e.cardId ? ' <span class="tag-pill">tarjeta</span>' : ''}</td>
-        <td>${formatCOP(e.amount)}</td>
-        <td><span class="kind-pill ${kindPill}">${translations[movement]}</span></td>
-        <td>${translations[e.type]}</td>
-        <td>${translations[concept]}</td>
-        <td>${tagsHtml}</td>
-        <td>${formatDate(e.createdAt)}<br><small>${timeAgo(e.createdAt)}</small></td>
-        <td>${formatDate(e.updatedAt)}<br><small>${timeAgo(e.updatedAt)}</small></td>
-        <td>${formatCompletedDate(e.completedAt)}<br><small>${timeAgo(e.completedAt)}</small></td>
-        <td><input type="checkbox" ${e.done?'checked':''} onclick="toggleDone(${i})"></td>
-        <td class="actions">
-          <button type="button" onclick="openMovementModal('edit', ${i})">Editar</button>
-          <button type="button" onclick="openDeleteConfirmModal(${i})">Eliminar</button>
-        </td>
-      </tr>`;
+      <article class="move-card ${e.done?'is-done':''} ${kindClass}">
+        <div class="move-main">
+          <div>
+            <strong class="move-title">${escapeHtml(e.name)}</strong>
+            <span class="kind-pill ${kindPill}">${translations[movement]}</span>
+            ${e.creditId ? '<span class="tag-pill">cuota</span>' : ''}${e.cardId ? '<span class="tag-pill">tarjeta</span>' : ''}
+          </div>
+          <div class="move-amount">${formatCOP(e.amount)}</div>
+        </div>
+        <div class="move-detail">
+          <div>${translations[e.type]} · ${translations[concept]}</div>
+          ${tagsHtml ? `<div>${tagsHtml}</div>` : ''}
+          <div>Creado ${formatDate(e.createdAt)} · ${timeAgo(e.createdAt)}</div>
+          <div>Actualizado ${formatDate(e.updatedAt)} · ${timeAgo(e.updatedAt)}</div>
+          ${e.done ? `<div>Finalizado ${formatCompletedDate(e.completedAt)} · ${timeAgo(e.completedAt)}</div>` : ''}
+        </div>
+        <div class="move-actions">
+          <button type="button" class="btn-mark ${e.done?'is-done':''}" onclick="toggleDone(${i})">${doneLabel}</button>
+          <button type="button" class="btn-secondary" onclick="openMovementModal('edit', ${i})">Editar</button>
+          <button type="button" class="btn-danger" onclick="openDeleteConfirmModal(${i})">Eliminar</button>
+        </div>
+      </article>`;
   });
+  applyMoveDetailMode();
 
   document.getElementById('totalFixed').innerText=formatCOP(estFixed);
   document.getElementById('totalVariable').innerText=formatCOP(estVariable);
@@ -2733,6 +2939,32 @@ function renderDashboard(fixed, variable, savings, doneFixed, doneVariable, done
 }
 
 document.getElementById("filterDone").addEventListener("change", () => render());
+
+let showMoveDetail = localStorage.getItem("finanzasMoveDetail") !== "zen";
+
+function applyMoveDetailMode() {
+  const list = document.getElementById("expenseList");
+  const btn = document.getElementById("toggleMoveDetail");
+  if (!list || !btn) return;
+  list.classList.toggle("zen", !showMoveDetail);
+  btn.textContent = showMoveDetail ? "Ocultar detalle" : "Mostrar detalle";
+  btn.setAttribute("aria-pressed", showMoveDetail ? "true" : "false");
+}
+
+document.getElementById("toggleMoveDetail").addEventListener("click", () => {
+  showMoveDetail = !showMoveDetail;
+  localStorage.setItem("finanzasMoveDetail", showMoveDetail ? "full" : "zen");
+  applyMoveDetailMode();
+});
+
+const THEME_KEY = "finanzasTheme";
+const themeToggle = document.getElementById("themeToggle");
+themeToggle.checked = document.documentElement.getAttribute("data-theme") === "dark";
+themeToggle.addEventListener("change", () => {
+  const dark = themeToggle.checked;
+  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
+});
 
 const now = new Date();
 document.getElementById("year").value = now.getFullYear();
