@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finanzas-v1.7.0';
+const CACHE_NAME = 'finanzas-v1.8.0';
 
 const urlsToCache = [
   './',
@@ -10,32 +10,67 @@ const urlsToCache = [
   './icon-512.png'
 ];
 
-// instalar
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
-  );
-});
+async function putFresh(cache, url) {
+  const res = await fetch(url, { cache: 'reload' });
+  if (!res.ok) throw new Error('No se pudo cachear ' + url);
+  await cache.put(url, res);
+}
 
-// activar (limpiar cache viejo)
-self.addEventListener('activate', event => {
-  const whitelist = [CACHE_NAME];
+self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys.map(key => {
-          if (!whitelist.includes(key)) {
-            return caches.delete(key);
-          }
-        })
-      )
+    caches.open(CACHE_NAME).then(cache =>
+      Promise.all(urlsToCache.map(url => putFresh(cache, url)))
     )
   );
 });
 
-// fetch
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+      ))
+      .then(() => self.clients.claim())
+  );
+});
+
+function isHtml(request) {
+  if (request.mode === 'navigate') return true;
+  const accept = request.headers.get('accept') || '';
+  return accept.includes('text/html');
+}
+
 self.addEventListener('fetch', event => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (isHtml(request)) {
+    event.respondWith(
+      fetch(request, { cache: 'no-cache' })
+        .then(res => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+          return res;
+        })
+        .catch(() => caches.match(request).then(cached => cached || caches.match('./index.html')))
+    );
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then(res => res || fetch(event.request))
+    caches.match(request).then(cached => {
+      const network = fetch(request).then(res => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+        }
+        return res;
+      });
+      return cached || network;
+    })
   );
 });

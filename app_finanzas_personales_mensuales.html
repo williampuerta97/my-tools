@@ -2973,5 +2973,14 @@ loadCredits();
 loadCards();
 loadData();
 </script>
+<script>
+  if ('serviceWorker' in navigator) {
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hadController) window.location.reload();
+    });
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {});
+  }
+</script>
 </body>
 </html>

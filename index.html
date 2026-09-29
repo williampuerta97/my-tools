@@ -102,18 +102,13 @@
 </div>
 <script>
   if ('serviceWorker' in navigator) {
-    console.log('SW soportado');
-  
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => {
-        console.log('SW REGISTRADO:', reg.scope);
-      })
-      .catch(err => {
-        console.error('ERROR SW:', err);
-      });
-  
-  } else {
-    console.log('SW NO soportado');
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hadController) window.location.reload();
+    });
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(err => {
+      console.error('ERROR SW:', err);
+    });
   }
   </script>
 </body>
