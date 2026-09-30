@@ -39,6 +39,8 @@
       --toggle-hover: #313849;
     }
 
+    *, *::before, *::after { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: Arial, sans-serif;
@@ -47,7 +49,8 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
+      min-height: 100dvh;
     }
 
     .phone {
@@ -65,13 +68,13 @@
     h1 {
       text-align: center;
       font-size: 20px;
-      margin-bottom: 20px;
+      margin: 28px 0 20px;
     }
 
     .theme-toggle {
       position: absolute;
-      top: 16px;
-      right: 16px;
+      top: 18px;
+      right: 18px;
       width: 38px;
       height: 38px;
       border: none;
@@ -126,8 +129,14 @@
     @media (max-width: 400px) {
       .phone {
         width: 100%;
-        height: 100vh;
+        height: auto;
+        min-height: 100vh;
+        min-height: 100dvh;
         border-radius: 0;
+        padding-top: calc(20px + env(safe-area-inset-top));
+      }
+      .theme-toggle {
+        top: calc(18px + env(safe-area-inset-top));
       }
     }
   </style>

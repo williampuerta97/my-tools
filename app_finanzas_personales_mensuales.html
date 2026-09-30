@@ -230,23 +230,67 @@
     }
 
     .summary-card h3 {
-      margin: 0 0 6px 0;
-      font-size: 0.72rem;
+      margin: 0 0 4px 0;
+      font-size: 0.64rem;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.05em;
       color: var(--muted);
       font-weight: 600;
     }
 
     .summary-card div {
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 700;
       color: var(--text);
       font-variant-numeric: tabular-nums;
     }
-    .dash-group { margin: 0.2rem 0 0.15rem; font-size: 1.05rem; }
-    .dash-group.act { margin-top: 1.1rem; }
-    .dash-note { margin: 0 0 0.6rem; font-size: 0.78rem; color: var(--muted); }
+    .dash-cols {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.1rem;
+      margin-bottom: 1.25rem;
+    }
+    @media (min-width: 900px) {
+      .dash-cols { grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    }
+    .dash-col { min-width: 0; }
+    .dash-group { margin: 0.2rem 0 0.1rem; font-size: 1.05rem; }
+    .dash-note { margin: 0 0 0.55rem; font-size: 0.74rem; color: var(--muted); }
+    .card.summary-card {
+      padding: 0.6rem 0.75rem;
+      margin-bottom: 0;
+      box-shadow: none;
+    }
+    .summary-card.hero { padding: 0.8rem 0.95rem; }
+    .summary-card.hero div { font-size: 1.4rem; }
+    .summary-card.hero h3 { font-size: 0.7rem; }
+    .sum-label {
+      margin: 0.8rem 0 0.35rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .sum-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.5rem;
+    }
+    .sum-grid > .wide,
+    .sum-grid > :only-child { grid-column: 1 / -1; }
+    .summary-card p.sum-hint {
+      margin: 0.3rem 0 0;
+      font-size: 0.66rem;
+      line-height: 1.35;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .summary-card.carry { background: var(--pill-ok-bg); }
+    .carry-restore {
+      width: auto !important;
+      padding: 0.2rem 0.5rem !important;
+      font-size: 0.66rem !important;
+      margin-top: 0.3rem;
+    }
     .summary-card.est { border-color: var(--est-border); }
     .summary-card.act { border-color: var(--act-border); }
 
@@ -858,28 +902,50 @@
   </div>
 
   <section data-tab-panel="dashboard">
-    <h2 class="dash-group">Estimado</h2>
-    <p class="dash-note">Movimientos creados que todavía no marcas como finalizados.</p>
-    <div class="grid">
-      <div class="card summary-card est"><h3>Gastos fijos</h3><div id="totalFixed"></div></div>
-      <div class="card summary-card est"><h3>Gastos variables</h3><div id="totalVariable"></div></div>
-      <div class="card summary-card est"><h3>Gastos totales</h3><div id="totalExpenses"></div></div>
-      <div class="card summary-card est"><h3>Ahorros este mes</h3><div id="totalSavings"></div></div>
-      <div class="card summary-card est"><h3>Otros ingresos</h3><div id="otherIncomes"></div></div>
-      <div class="card summary-card est"><h3>Salario + ingresos</h3><div id="estimatedSalary"></div></div>
-      <div class="card summary-card est"><h3>Dinero restante del mes</h3><div id="remaining"></div><p id="remainingHint" style="font-size:0.68rem;color:var(--muted);margin:0.35rem 0 0 0;font-weight:500;line-height:1.35;"></p></div>
-    </div>
-    <h2 class="dash-group act">Actual</h2>
-    <p class="dash-note">Solo lo que ya marcaste como finalizado.</p>
-    <div class="grid">
-      <div class="card summary-card act"><h3>Gastos fijos</h3><div id="doneFixed"></div></div>
-      <div class="card summary-card act"><h3>Gastos variables</h3><div id="doneVariable"></div></div>
-      <div class="card summary-card act"><h3>Gastos totales</h3><div id="doneExpenses"></div></div>
-      <div class="card summary-card act"><h3>Ahorros este mes</h3><div id="doneSavings"></div></div>
-      <div class="card summary-card act"><h3>Otros ingresos</h3><div id="doneIncomes"></div></div>
-      <div class="card summary-card act"><h3>Salario + ingresos</h3><div id="adjustedSalary"></div></div>
-      <div class="card summary-card act"><h3>Dinero actual</h3><div id="expectedMoneyDone"></div><p id="moneyDoneHint" style="font-size:0.68rem;color:var(--muted);margin:0.35rem 0 0 0;font-weight:500;line-height:1.35;"></p></div>
-      <div class="card summary-card act"><h3>Ahorro general</h3><div id="totalGeneralSavings"></div><p style="font-size:0.68rem;color:var(--muted);margin:0.35rem 0 0 0;font-weight:500;line-height:1.35;">Acumulado de todos los meses, solo finalizado.</p></div>
+    <div class="dash-cols">
+      <div class="dash-col">
+        <h2 class="dash-group">Estimado</h2>
+        <p class="dash-note">Creado y todavía sin finalizar.</p>
+        <div class="card summary-card est hero"><h3>Dinero restante del mes</h3><div id="remaining"></div><p id="remainingHint" class="sum-hint"></p></div>
+        <p class="sum-label">Ingresos</p>
+        <div class="sum-grid">
+          <div class="card summary-card est wide"><h3>Salario + ingresos</h3><div id="estimatedSalary"></div><p id="estSalaryHint" class="sum-hint" hidden>Incluye el sobrante.</p></div>
+          <div class="card summary-card est carry"><h3 id="carryInTitleEst">Sobrante del mes pasado</h3><div id="carryInEst"></div><p id="carryInHintEst" class="sum-hint"></p></div>
+          <div class="card summary-card est"><h3>Otros ingresos</h3><div id="otherIncomes"></div><p class="sum-hint">Solo lo pendiente.</p></div>
+        </div>
+        <p class="sum-label">Gastos</p>
+        <div class="sum-grid">
+          <div class="card summary-card est wide"><h3>Gastos totales</h3><div id="totalExpenses"></div></div>
+          <div class="card summary-card est"><h3>Fijos</h3><div id="totalFixed"></div></div>
+          <div class="card summary-card est"><h3>Variables</h3><div id="totalVariable"></div></div>
+        </div>
+        <p class="sum-label">Ahorro</p>
+        <div class="sum-grid">
+          <div class="card summary-card est"><h3>Ahorros este mes</h3><div id="totalSavings"></div></div>
+        </div>
+      </div>
+      <div class="dash-col">
+        <h2 class="dash-group act">Actual</h2>
+        <p class="dash-note">Solo lo que ya marcaste como finalizado.</p>
+        <div class="card summary-card act hero"><h3>Dinero actual</h3><div id="expectedMoneyDone"></div><p id="moneyDoneHint" class="sum-hint"></p></div>
+        <p class="sum-label">Ingresos</p>
+        <div class="sum-grid">
+          <div class="card summary-card act wide"><h3>Salario + ingresos</h3><div id="adjustedSalary"></div></div>
+          <div class="card summary-card act carry"><h3 id="carryInTitle">Sobrante del mes pasado</h3><div id="carryIn"></div><p id="carryInHint" class="sum-hint"></p></div>
+          <div class="card summary-card act"><h3>Otros ingresos</h3><div id="doneIncomes"></div><p id="doneIncomesHint" class="sum-hint" hidden>Incluye el sobrante.</p></div>
+        </div>
+        <p class="sum-label">Gastos</p>
+        <div class="sum-grid">
+          <div class="card summary-card act wide"><h3>Gastos totales</h3><div id="doneExpenses"></div></div>
+          <div class="card summary-card act"><h3>Fijos</h3><div id="doneFixed"></div></div>
+          <div class="card summary-card act"><h3>Variables</h3><div id="doneVariable"></div></div>
+        </div>
+        <p class="sum-label">Ahorro</p>
+        <div class="sum-grid">
+          <div class="card summary-card act"><h3>Ahorros este mes</h3><div id="doneSavings"></div></div>
+          <div class="card summary-card act"><h3>Ahorro general</h3><div id="totalGeneralSavings"></div><p class="sum-hint">Todos los meses, solo finalizado.</p></div>
+        </div>
+      </div>
     </div>
     <div class="card">
       <h3>Distribución del mes</h3>
@@ -1417,7 +1483,7 @@ function openDeleteConfirmModal(i) {
     extra.textContent = 'Es la cuota de una tarjeta. Si la eliminas, no vuelve a este mes. Para quitarla de los demás meses, pausa la tarjeta.';
   } else if (expenses[i].carryFrom) {
     extra.hidden = false;
-    extra.textContent = 'Es lo que sobró del mes anterior. Si lo eliminas, puedes volver a incluirlo desde Resumen, en Dinero actual.';
+    extra.textContent = 'Es lo que sobró del mes anterior. Si lo eliminas, puedes volver a incluirlo desde Resumen, en la card del sobrante.';
   } else {
     extra.hidden = true;
     extra.textContent = '';
@@ -2439,16 +2505,20 @@ function monthClosingStatus(list, monthSalary, carryIn) {
   return { pending, leftover: money, closed: count > 0 && pending === 0 };
 }
 
-function carryIntoMonth(year, month, depth = 0) {
-  if (depth > 36) return 0;
-  const prev = prevPeriod(year, month);
-  const data = readMonthData(prev.year, prev.month);
-  if (!data) return 0;
-  const prevCarry = data.carryDismissed ? 0 : carryIntoMonth(prev.year, prev.month, depth + 1);
+function storedMonthStatus(year, month, depth = 0) {
+  if (depth > 36) return null;
+  const data = readMonthData(year, month);
+  if (!data) return null;
+  const carryIn = data.carryDismissed ? 0 : carryIntoMonth(year, month, depth + 1);
   let list = data.expenses;
-  if (prevCarry > 0 && !list.some(e => e.carryFrom)) list = list.concat([{ carryFrom: true, done: true }]);
-  const status = monthClosingStatus(list, data.salary || 4000000, prevCarry);
-  return status.closed && status.leftover > 0 ? status.leftover : 0;
+  if (carryIn > 0 && !list.some(e => e.carryFrom)) list = list.concat([{ carryFrom: true, done: true }]);
+  return monthClosingStatus(list, data.salary || 4000000, carryIn);
+}
+
+function carryIntoMonth(year, month, depth = 0) {
+  const prev = prevPeriod(year, month);
+  const status = storedMonthStatus(prev.year, prev.month, depth);
+  return status && status.closed && status.leftover > 0 ? status.leftover : 0;
 }
 
 function syncCarryover() {
@@ -2503,32 +2573,74 @@ function restoreCarryover() {
 }
 
 function renderCarryHint() {
-  const el = document.getElementById('moneyDoneHint');
-  if (!el) return;
+  const outEl = document.getElementById('moneyDoneHint');
+  const inEl = document.getElementById('carryIn');
+  const inHint = document.getElementById('carryInHint');
+  const inTitle = document.getElementById('carryInTitle');
   const period = loadedPeriod();
-  if (!period) { el.textContent = ''; return; }
+  if (!period) {
+    if (outEl) outEl.textContent = '';
+    if (inHint) inHint.textContent = '';
+    return;
+  }
   const prev = prevPeriod(period.year, period.month);
   const next = nextPeriod(period.year, period.month);
+  const prevName = MONTH_NAMES[prev.month];
   const line = expenses.find(e => e.carryFrom);
-  const status = monthClosingStatus(expenses, salary, line ? Number(line.amount) || 0 : 0);
-  const parts = [];
-  if (line) parts.push(`Incluye ${formatCOP(line.amount)} que sobró de ${MONTH_NAMES[prev.month]}.`);
-  if (status.pending > 0) {
-    const what = status.pending === 1 ? 'el movimiento pendiente' : `los ${status.pending} pendientes`;
-    parts.push(`Cuando finalices ${what}, lo que quede pasa a ${MONTH_NAMES[next.month]}.`);
-  } else if (status.leftover > 0) {
-    parts.push(`Mes cerrado: ${formatCOP(status.leftover)} pasa a ${MONTH_NAMES[next.month]}.`);
-  } else {
-    parts.push(`Mes cerrado sin sobrante para ${MONTH_NAMES[next.month]}.`);
+  const lineAmount = line ? Number(line.amount) || 0 : 0;
+  const incomesHint = document.getElementById('doneIncomesHint');
+  if (incomesHint) incomesHint.hidden = !(line && line.done);
+  const estSalaryHint = document.getElementById('estSalaryHint');
+  if (estSalaryHint) estSalaryHint.hidden = !line;
+  const estTitle = document.getElementById('carryInTitleEst');
+  const estVal = document.getElementById('carryInEst');
+  const estHint = document.getElementById('carryInHintEst');
+  if (estTitle) estTitle.textContent = `Sobrante de ${prevName}`;
+  if (estVal) estVal.textContent = formatCOP(lineAmount);
+  if (estHint) {
+    estHint.textContent = line
+      ? 'Base con la que arrancas el mes.'
+      : 'Se suma cuando cierres el mes anterior con dinero sin gastar.';
   }
-  let html = escapeHtml(parts.join(' '));
+
+  if (outEl) {
+    const status = monthClosingStatus(expenses, salary, lineAmount);
+    if (status.pending > 0) {
+      const what = status.pending === 1 ? 'el movimiento pendiente' : `los ${status.pending} pendientes`;
+      outEl.textContent = `Cuando finalices ${what}, lo que quede pasa a ${MONTH_NAMES[next.month]}.`;
+    } else if (status.leftover > 0) {
+      outEl.textContent = `Mes cerrado: ${formatCOP(status.leftover)} pasa a ${MONTH_NAMES[next.month]}.`;
+    } else {
+      outEl.textContent = `Mes cerrado sin sobrante para ${MONTH_NAMES[next.month]}.`;
+    }
+  }
+
+  if (!inEl || !inHint) return;
+  if (inTitle) inTitle.textContent = `Sobrante de ${prevName}`;
+  inEl.textContent = formatCOP(lineAmount);
+
+  if (line) {
+    inHint.textContent = line.done
+      ? `Ya suma en Dinero actual.`
+      : `Está pendiente: finalízalo para sumarlo a Dinero actual.`;
+    return;
+  }
   if (carryDismissed) {
     const possible = carryIntoMonth(period.year, period.month);
     if (possible > 0) {
-      html += ` <button type="button" class="btn-secondary" style="width:auto;padding:0.2rem 0.5rem;font-size:0.68rem;margin-top:0.3rem;" onclick="restoreCarryover()">Incluir sobrante de ${MONTH_NAMES[prev.month]} (${formatCOP(possible)})</button>`;
+      inHint.innerHTML = `Lo quitaste de este mes. <button type="button" class="btn-secondary carry-restore" onclick="restoreCarryover()">Incluir ${escapeHtml(formatCOP(possible))}</button>`;
+      return;
     }
   }
-  el.innerHTML = html;
+  const prevStatus = storedMonthStatus(prev.year, prev.month);
+  if (!prevStatus) {
+    inHint.textContent = `No hay datos de ${prevName} ${prev.year}.`;
+  } else if (prevStatus.pending > 0) {
+    const what = prevStatus.pending === 1 ? '1 movimiento pendiente' : `${prevStatus.pending} pendientes`;
+    inHint.textContent = `${prevName} tiene ${what}. Entra cuando lo cierres.`;
+  } else {
+    inHint.textContent = `${prevName} cerró sin sobrante.`;
+  }
 }
 
 function copyExpensesFromMonth(source, baseTs) {
@@ -2953,7 +3065,8 @@ function render(){
   const estSaveWithdraw = sWithdrawAll - sWithdraw;
   const estIncomes = otherIncomesTotal - doneIncomes;
   const adjustedSalary = salary + doneIncomes;
-  const estimatedSalary = salary + estIncomes;
+  const carryLine = expenses.find(e => e.carryFrom && e.done);
+  const estimatedSalary = salary + estIncomes + (carryLine ? Number(carryLine.amount) || 0 : 0);
   const remainingApprox = (Number(salary) || 0) + sumIncomeRows - sumExpenseRows;
 
   const tagRows = Object.keys(tagBuckets)
@@ -3042,7 +3155,7 @@ function render(){
   document.getElementById('remaining').innerText=formatCOP(remainingApprox);
   const hint = document.getElementById('remainingHint');
   if (hint) {
-    hint.textContent = `Salario + ingresos creados (${formatCOP(sumIncomeRows)}) − gastos creados (${formatCOP(sumExpenseRows)}).`;
+    hint.textContent = `Salario (${formatCOP(salary)}) + ingresos creados (${formatCOP(sumIncomeRows)}) − gastos creados (${formatCOP(sumExpenseRows)}).`;
   }
   renderDashboard(estFixed, estVariable, estSaveAlloc, fDone, vDone, sAlloc, tagRows);
   renderCreditsModal();
