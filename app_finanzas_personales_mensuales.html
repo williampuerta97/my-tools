@@ -630,7 +630,7 @@
       border-radius: 10px;
       font-size: 0.68rem;
       line-height: 1.2;
-      padding: 1.45rem 0.15rem;
+      padding: 1.65rem 0.15rem;
     }
     .tabbar button.active {
       background: var(--accent-soft);
@@ -878,7 +878,7 @@
       <div class="card summary-card act"><h3>Ahorros este mes</h3><div id="doneSavings"></div></div>
       <div class="card summary-card act"><h3>Otros ingresos</h3><div id="doneIncomes"></div></div>
       <div class="card summary-card act"><h3>Salario + ingresos</h3><div id="adjustedSalary"></div></div>
-      <div class="card summary-card act"><h3>Dinero actual</h3><div id="expectedMoneyDone"></div></div>
+      <div class="card summary-card act"><h3>Dinero actual</h3><div id="expectedMoneyDone"></div><p id="moneyDoneHint" style="font-size:0.68rem;color:var(--muted);margin:0.35rem 0 0 0;font-weight:500;line-height:1.35;"></p></div>
       <div class="card summary-card act"><h3>Ahorro general</h3><div id="totalGeneralSavings"></div><p style="font-size:0.68rem;color:var(--muted);margin:0.35rem 0 0 0;font-weight:500;line-height:1.35;">Acumulado de todos los meses, solo finalizado.</p></div>
     </div>
     <div class="card">
@@ -1332,6 +1332,7 @@ let credits = [];
 let cards = [];
 let dismissedCreditIds = [];
 let dismissedCardIds = [];
+let carryDismissed = false;
 let creditModalEditId = null;
 let showInactiveCredits = false;
 let editingCardMovement = null;
@@ -1414,6 +1415,9 @@ function openDeleteConfirmModal(i) {
   } else if (expenses[i].cardId) {
     extra.hidden = false;
     extra.textContent = 'Es la cuota de una tarjeta. Si la eliminas, no vuelve a este mes. Para quitarla de los demás meses, pausa la tarjeta.';
+  } else if (expenses[i].carryFrom) {
+    extra.hidden = false;
+    extra.textContent = 'Es lo que sobró del mes anterior. Si lo eliminas, puedes volver a incluirlo desde Resumen, en Dinero actual.';
   } else {
     extra.hidden = true;
     extra.textContent = '';
@@ -1478,6 +1482,7 @@ function confirmDeleteExpense() {
     if (removed.cardId && !dismissedCardIds.includes(removed.cardId)) {
       dismissedCardIds.push(removed.cardId);
     }
+    if (removed.carryFrom) carryDismissed = true;
     expenses.splice(pendingDeleteIndex, 1);
     saveData();
     render();
@@ -2396,8 +2401,138 @@ function defaultMonthExpenses(baseTs) {
   ].map(e => ({ ...e, createdAt: baseTs, updatedAt: baseTs }));
 }
 
+function prevPeriod(year, month) {
+  return month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
+}
+
+function nextPeriod(year, month) {
+  return month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+}
+
+function readMonthData(year, month) {
+  try {
+    const data = JSON.parse(localStorage.getItem(`finanzas-${year}-${month}`) || 'null');
+    return data && Array.isArray(data.expenses) ? data : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function monthClosingStatus(list, monthSalary, carryIn) {
+  let pending = 0;
+  let money = Number(monthSalary) || 0;
+  let count = 0;
+  list.forEach(e => {
+    if (e.carryFrom) {
+      if (!carryIn) return;
+      count++;
+      if (e.done) money += carryIn;
+      else pending++;
+      return;
+    }
+    count++;
+    if (!e.done) { pending++; return; }
+    const amt = Number(e.amount) || 0;
+    if ((e.movement || 'expense') === 'income') money += amt;
+    else if ((e.concept || 'salary') === 'salary') money -= amt;
+  });
+  return { pending, leftover: money, closed: count > 0 && pending === 0 };
+}
+
+function carryIntoMonth(year, month, depth = 0) {
+  if (depth > 36) return 0;
+  const prev = prevPeriod(year, month);
+  const data = readMonthData(prev.year, prev.month);
+  if (!data) return 0;
+  const prevCarry = data.carryDismissed ? 0 : carryIntoMonth(prev.year, prev.month, depth + 1);
+  let list = data.expenses;
+  if (prevCarry > 0 && !list.some(e => e.carryFrom)) list = list.concat([{ carryFrom: true, done: true }]);
+  const status = monthClosingStatus(list, data.salary || 4000000, prevCarry);
+  return status.closed && status.leftover > 0 ? status.leftover : 0;
+}
+
+function syncCarryover() {
+  const period = loadedPeriod();
+  if (!period) return;
+  const prev = prevPeriod(period.year, period.month);
+  const prevKey = `finanzas-${prev.year}-${prev.month}`;
+  const expected = carryDismissed ? 0 : carryIntoMonth(period.year, period.month);
+  const idx = expenses.findIndex(e => e.carryFrom);
+  const name = `Sobrante de ${MONTH_NAMES[prev.month]} ${prev.year}`;
+  const now = Date.now();
+
+  if (expected <= 0) {
+    if (idx !== -1) {
+      expenses.splice(idx, 1);
+      saveData();
+    }
+    return;
+  }
+  if (idx === -1) {
+    expenses.unshift({
+      name,
+      amount: expected,
+      movement: 'income',
+      type: 'variable',
+      concept: 'salary',
+      tags: [],
+      done: true,
+      completedAt: now,
+      carryFrom: prevKey,
+      createdAt: now,
+      updatedAt: now
+    });
+    saveData();
+    return;
+  }
+  const e = expenses[idx];
+  if (Number(e.amount) !== expected || e.name !== name || e.carryFrom !== prevKey) {
+    e.amount = expected;
+    e.name = name;
+    e.carryFrom = prevKey;
+    e.updatedAt = now;
+    saveData();
+  }
+}
+
+function restoreCarryover() {
+  carryDismissed = false;
+  syncCarryover();
+  saveData();
+  render();
+}
+
+function renderCarryHint() {
+  const el = document.getElementById('moneyDoneHint');
+  if (!el) return;
+  const period = loadedPeriod();
+  if (!period) { el.textContent = ''; return; }
+  const prev = prevPeriod(period.year, period.month);
+  const next = nextPeriod(period.year, period.month);
+  const line = expenses.find(e => e.carryFrom);
+  const status = monthClosingStatus(expenses, salary, line ? Number(line.amount) || 0 : 0);
+  const parts = [];
+  if (line) parts.push(`Incluye ${formatCOP(line.amount)} que sobró de ${MONTH_NAMES[prev.month]}.`);
+  if (status.pending > 0) {
+    const what = status.pending === 1 ? 'el movimiento pendiente' : `los ${status.pending} pendientes`;
+    parts.push(`Cuando finalices ${what}, lo que quede pasa a ${MONTH_NAMES[next.month]}.`);
+  } else if (status.leftover > 0) {
+    parts.push(`Mes cerrado: ${formatCOP(status.leftover)} pasa a ${MONTH_NAMES[next.month]}.`);
+  } else {
+    parts.push(`Mes cerrado sin sobrante para ${MONTH_NAMES[next.month]}.`);
+  }
+  let html = escapeHtml(parts.join(' '));
+  if (carryDismissed) {
+    const possible = carryIntoMonth(period.year, period.month);
+    if (possible > 0) {
+      html += ` <button type="button" class="btn-secondary" style="width:auto;padding:0.2rem 0.5rem;font-size:0.68rem;margin-top:0.3rem;" onclick="restoreCarryover()">Incluir sobrante de ${MONTH_NAMES[prev.month]} (${formatCOP(possible)})</button>`;
+    }
+  }
+  el.innerHTML = html;
+}
+
 function copyExpensesFromMonth(source, baseTs) {
-  return (source || []).map(e => {
+  return (source || []).filter(e => !e.carryFrom).map(e => {
     const copy = {
       name: e.name,
       amount: Number(e.amount) || 0,
@@ -2423,6 +2558,7 @@ function loadData(){
   if(!dataRaw){
     dismissedCreditIds = [];
     dismissedCardIds = [];
+    carryDismissed = false;
     const year = Number(document.getElementById('year').value);
     const month = Number(document.getElementById('month').value);
     const previous = findPreviousMonthData(year, month);
@@ -2440,6 +2576,7 @@ function loadData(){
     salary = data.salary || 4000000;
     dismissedCreditIds = Array.isArray(data.dismissedCreditIds) ? data.dismissedCreditIds : [];
     dismissedCardIds = Array.isArray(data.dismissedCardIds) ? data.dismissedCardIds : [];
+    carryDismissed = data.carryDismissed === true;
 
     const fallbackTs = getMonthStartTimestamp();
 
@@ -2453,11 +2590,14 @@ function loadData(){
   document.getElementById('salary').value = formatCOP(salary);
   syncActiveCreditExpenses();
   syncCardExpenses();
+  syncCarryover();
   render();
 }
 
 function saveData(){
-  localStorage.setItem(currentKey, JSON.stringify({ expenses, salary, dismissedCreditIds, dismissedCardIds }));
+  const data = { expenses, salary, dismissedCreditIds, dismissedCardIds };
+  if (carryDismissed) data.carryDismissed = true;
+  localStorage.setItem(currentKey, JSON.stringify(data));
 }
 
 document.getElementById("mAmount").addEventListener("input", e => {
@@ -2864,7 +3004,7 @@ function render(){
           <div>
             <strong class="move-title">${escapeHtml(e.name)}</strong>
             <span class="kind-pill ${kindPill}">${translations[movement]}</span>
-            ${e.creditId ? '<span class="tag-pill">cuota</span>' : ''}${e.cardId ? '<span class="tag-pill">tarjeta</span>' : ''}
+            ${e.creditId ? '<span class="tag-pill">cuota</span>' : ''}${e.cardId ? '<span class="tag-pill">tarjeta</span>' : ''}${e.carryFrom ? '<span class="tag-pill">sobrante</span>' : ''}
           </div>
           <div class="move-amount">${formatCOP(e.amount)}</div>
         </div>
@@ -2877,7 +3017,7 @@ function render(){
         </div>
         <div class="move-actions">
           <button type="button" class="btn-mark ${e.done?'is-done':''}" onclick="toggleDone(${i})">${doneLabel}</button>
-          <button type="button" class="btn-secondary" onclick="openMovementModal('edit', ${i})">Editar</button>
+          ${e.carryFrom ? '' : `<button type="button" class="btn-secondary" onclick="openMovementModal('edit', ${i})">Editar</button>`}
           <button type="button" class="btn-danger" onclick="openDeleteConfirmModal(${i})">Eliminar</button>
         </div>
       </article>`;
@@ -2898,6 +3038,7 @@ function render(){
   document.getElementById('adjustedSalary').innerText=formatCOP(adjustedSalary);
   document.getElementById('totalGeneralSavings').innerText=formatCOP(getGeneralSavings());
   document.getElementById('expectedMoneyDone').innerText=formatCOP((salary + doneIncomes)-doneFromSalary);
+  renderCarryHint();
   document.getElementById('remaining').innerText=formatCOP(remainingApprox);
   const hint = document.getElementById('remainingHint');
   if (hint) {
