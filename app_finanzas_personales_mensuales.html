@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Finanzas Mensuales</title>
   <script>
     try {
@@ -58,8 +58,11 @@
       --est-border: #c5d4fb;
       --act-border: #b7e4d4;
       --bar-track: #eef1f8;
-      --tabbar: rgba(255, 255, 255, 0.96);
-      --tab-hover: #f4f6fb;
+      --tabbar: rgba(255, 255, 255, 0.72);
+      --tabbar-border: rgba(255, 255, 255, 0.7);
+      --tabbar-shadow: 0 10px 30px rgba(26, 31, 46, 0.16), 0 1px 3px rgba(26, 31, 46, 0.08);
+      --tab-active-bg: rgba(61, 110, 232, 0.12);
+      --tab-hover: rgba(26, 31, 46, 0.05);
     }
 
     html[data-theme="dark"] {
@@ -104,8 +107,11 @@
       --est-border: #3a4d73;
       --act-border: #245744;
       --bar-track: #2a3142;
-      --tabbar: rgba(18, 21, 28, 0.94);
-      --tab-hover: #262c3a;
+      --tabbar: rgba(34, 39, 51, 0.7);
+      --tabbar-border: rgba(255, 255, 255, 0.1);
+      --tabbar-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
+      --tab-active-bg: rgba(126, 162, 255, 0.18);
+      --tab-hover: rgba(255, 255, 255, 0.06);
     }
 
     * { box-sizing: border-box; }
@@ -118,7 +124,10 @@
       color: var(--text);
       line-height: 1.45;
       padding: clamp(0.75rem, 3vw, 1.5rem);
-      padding-bottom: calc(5.2rem + env(safe-area-inset-bottom));
+      padding-top: max(clamp(0.75rem, 3vw, 1.5rem), env(safe-area-inset-top));
+      padding-left: max(clamp(0.75rem, 3vw, 1.5rem), env(safe-area-inset-left));
+      padding-right: max(clamp(0.75rem, 3vw, 1.5rem), env(safe-area-inset-right));
+      padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
     }
 
     h1 {
@@ -655,32 +664,52 @@
     /* Responsive: solo tabla de movimientos (no afecta tag-summary-table ni otras tablas) */
     .tabbar {
       position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: max(0.75rem, env(safe-area-inset-bottom));
+      width: min(calc(100% - 1.5rem), 30rem);
       z-index: 30;
       display: flex;
-      gap: 0.2rem;
+      gap: 0.15rem;
+      padding: 0.3rem;
       background: var(--tabbar);
-      border-top: 1px solid var(--border);
-      padding: 0.35rem 0.35rem calc(0.35rem + env(safe-area-inset-bottom));
-      backdrop-filter: blur(8px);
+      border: 1px solid var(--tabbar-border);
+      border-radius: 999px;
+      box-shadow: var(--tabbar-shadow);
+      -webkit-backdrop-filter: blur(22px) saturate(180%);
+      backdrop-filter: blur(22px) saturate(180%);
     }
     .tabbar button {
       flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.15rem;
       background: transparent;
       color: var(--muted);
       box-shadow: none;
-      border-radius: 10px;
-      font-size: 0.68rem;
-      line-height: 1.2;
-      padding: 1.65rem 0.15rem;
+      border-radius: 999px;
+      font-size: 0.66rem;
+      font-weight: 600;
+      line-height: 1.1;
+      padding: 0.45rem 0.2rem 0.4rem;
+      transition: background 0.2s ease, color 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tabbar button svg {
+      width: 1.45rem;
+      height: 1.45rem;
+      transition: transform 0.2s ease;
     }
     .tabbar button.active {
-      background: var(--accent-soft);
-      color: var(--accent-ink);
+      background: var(--tab-active-bg);
+      color: var(--accent);
     }
-    .tabbar button:hover { transform: none; box-shadow: none; background: var(--tab-hover); }
+    .tabbar button.active svg { transform: scale(1.06); }
+    .tabbar button:active svg { transform: scale(0.9); }
+    .tabbar button:hover { transform: none; box-shadow: none; }
+    .tabbar button:not(.active):hover { background: var(--tab-hover); }
     .tab-panel[hidden] { display: none !important; }
     .section-head {
       display: flex;
@@ -1019,7 +1048,8 @@
     </div>
     <div class="card">
       <h3>Copia de seguridad</h3>
-      <p>Exporta o importa todos los meses, créditos y tarjetas de este navegador (<code>finanzas-año-mes</code>).</p>
+      <p>Un solo archivo con todo: todos los meses, créditos, tarjetas (con compras y abonos) y tus preferencias de tema y detalle.</p>
+      <p id="backupSummary" style="margin:0 0 0.6rem;font-size:0.78rem;color:var(--muted);"></p>
       <div class="form-grid">
         <div>
           <label>Al importar</label>
@@ -1029,22 +1059,35 @@
           </select>
         </div>
         <div>
-          <button type="button" onclick="exportFinanzasBackup()">Exportar JSON</button>
+          <button type="button" onclick="exportFinanzasBackup()">Exportar todo (JSON)</button>
         </div>
         <div>
           <input type="file" id="importFile" accept=".json,application/json" style="display:none" />
           <button type="button" onclick="document.getElementById('importFile').click()">Importar JSON…</button>
         </div>
       </div>
+      <p id="backupStatus" style="margin:0.6rem 0 0;font-size:0.78rem;color:var(--muted);"></p>
     </div>
   </section>
 </div>
 
 <nav class="tabbar" aria-label="Secciones">
-  <button type="button" data-tab="dashboard" class="active" aria-selected="true">Resumen</button>
-  <button type="button" data-tab="movements" aria-selected="false">Movimientos</button>
-  <button type="button" data-tab="debts" aria-selected="false">Deudas</button>
-  <button type="button" data-tab="settings" aria-selected="false">Ajustes</button>
+  <button type="button" data-tab="dashboard" class="active" aria-selected="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+    <span>Resumen</span>
+  </button>
+  <button type="button" data-tab="movements" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16"/><path d="m3 8 4-4 4 4"/><path d="M17 20V4"/><path d="m21 16-4 4-4-4"/></svg>
+    <span>Movimientos</span>
+  </button>
+  <button type="button" data-tab="debts" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19"/><path d="M6.5 15h4"/></svg>
+    <span>Deudas</span>
+  </button>
+  <button type="button" data-tab="settings" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10"/><path d="M18 7h2"/><circle cx="16" cy="7" r="2"/><path d="M4 17h4"/><path d="M12 17h8"/><circle cx="10" cy="17" r="2"/></svg>
+    <span>Ajustes</span>
+  </button>
 </nav>
 
 <div id="modalCreditsWrap" class="modal-wrap" hidden>
@@ -3115,9 +3158,14 @@ document.getElementById("importFile").addEventListener("change", e => {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const n = importFinanzasBackupText(reader.result, mode);
-      alert(`Importación correcta: ${n} mes(es) actualizado(s).`);
+      const summary = importFinanzasBackupText(reader.result, mode);
+      loadCredits();
+      loadCards();
+      applyImportedPreferences();
       loadData();
+      const status = document.getElementById("backupStatus");
+      if (status) status.textContent = `Importado: ${summaryText(summary)}.`;
+      alert(`Importación correcta: ${summaryText(summary)}.`);
     } catch (err) {
       alert("No se pudo importar: " + (err && err.message ? err.message : String(err)));
     }
@@ -3142,13 +3190,41 @@ function collectFinanzasFromStorage(){
   return entries;
 }
 
+const PREFERENCE_KEYS = ["finanzasTheme", "finanzasMoveDetail"];
+
+function summarizeEntries(entries){
+  const keys = Object.keys(entries);
+  const months = keys.filter(k => /^finanzas-\d+-\d+$/.test(k)).length;
+  const credits = Array.isArray(entries[CREDITS_KEY]) ? entries[CREDITS_KEY].length : 0;
+  const cards = Array.isArray(entries[CARDS_KEY]) ? entries[CARDS_KEY].length : 0;
+  return { months, credits, cards };
+}
+
+function updateBackupSummary(){
+  const el = document.getElementById("backupSummary");
+  if (el) el.textContent = `En este navegador hay ${summaryText(summarizeEntries(collectFinanzasFromStorage()))}.`;
+}
+
+function summaryText(s){
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  return `${plural(s.months, 'mes', 'meses')}, ${plural(s.credits, 'crédito', 'créditos')} y ${plural(s.cards, 'tarjeta', 'tarjetas')}`;
+}
+
 function exportFinanzasBackup(){
   const entries = collectFinanzasFromStorage();
+  const preferences = {};
+  PREFERENCE_KEYS.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v != null) preferences[k] = v;
+  });
+  const summary = summarizeEntries(entries);
   const payload = {
     app: "finanzas-mensuales",
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
+    summary,
     entries,
+    preferences,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
   const a = document.createElement("a");
@@ -3156,7 +3232,9 @@ function exportFinanzasBackup(){
   a.href = URL.createObjectURL(blob);
   a.download = `finanzas-backup-${stamp}.json`;
   a.click();
-  URL.revokeObjectURL(a.href);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  const status = document.getElementById("backupStatus");
+  if (status) status.textContent = `Exportado: ${summaryText(summary)} en ${a.download}.`;
 }
 
 function extractEntriesFromImportObject(obj){
@@ -3180,6 +3258,12 @@ function importFinanzasBackupText(text, mode){
   const parsed = JSON.parse(text);
   const entries = extractEntriesFromImportObject(parsed);
   let count = 0;
+  const prefs = parsed && parsed.preferences && typeof parsed.preferences === "object" ? parsed.preferences : null;
+  if (prefs) {
+    PREFERENCE_KEYS.forEach(k => {
+      if (typeof prefs[k] === "string") localStorage.setItem(k, prefs[k]);
+    });
+  }
 
   if (mode === "replace") {
     for (let i = localStorage.length - 1; i >= 0; i--) {
@@ -3197,7 +3281,16 @@ function importFinanzasBackupText(text, mode){
     count++;
   }
 
-  return count;
+  return summarizeEntries(entries);
+}
+
+function applyImportedPreferences(){
+  const dark = localStorage.getItem("finanzasTheme") === "dark";
+  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  const toggle = document.getElementById("themeToggle");
+  if (toggle) toggle.checked = dark;
+  showMoveDetail = localStorage.getItem("finanzasMoveDetail") !== "zen";
+  applyMoveDetailMode();
 }
 
 function setAllDone(done) {
@@ -3426,6 +3519,7 @@ function render(){
   renderDashboard(estFixed, estVariable, estSaveAlloc, fDone, vDone, sAlloc, tagRows);
   renderCreditsModal();
   renderCardsModal();
+  updateBackupSummary();
 }
 
 function renderDashboard(fixed, variable, savings, doneFixed, doneVariable, doneSavings, tagRows) {
