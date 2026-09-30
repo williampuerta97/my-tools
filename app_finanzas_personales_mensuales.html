@@ -1475,7 +1475,10 @@ function openDeleteConfirmModal(i) {
   document.getElementById('deleteConfirmName').textContent = expenses[i].name;
   document.getElementById('deleteConfirmAmount').textContent = formatCOP(expenses[i].amount);
   const extra = document.getElementById('deleteConfirmExtra');
-  if (expenses[i].creditId) {
+  if (expenses[i].abonoLine) {
+    extra.hidden = false;
+    extra.textContent = 'Es un abono registrado en Deudas. Si lo eliminas, también se quita ese abono de la deuda.';
+  } else if (expenses[i].creditId) {
     extra.hidden = false;
     extra.textContent = 'Es la cuota de un crédito activo. Si la eliminas, no vuelve a este mes. Para quitarla de los demás meses, pausa el crédito.';
   } else if (expenses[i].cardId) {
@@ -1542,6 +1545,11 @@ function confirmDeleteExpense() {
   }
   if (pendingDeleteIndex !== null && expenses[pendingDeleteIndex]) {
     const removed = expenses[pendingDeleteIndex];
+    if (removed.abonoLine) {
+      removeMonthAbonos(removed);
+      closeDeleteModal();
+      return;
+    }
     if (removed.creditId && !dismissedCreditIds.includes(removed.creditId)) {
       dismissedCreditIds.push(removed.creditId);
     }
@@ -1604,7 +1612,8 @@ function projectDebt(spec) {
     const index = start + schedule.length;
     const cuotaMes = Math.min(cuota, balance);
     const monthAbonos = abonos.filter(a => periodIndex(a.year, a.month) === index);
-    const extra = monthAbonos.reduce((sum, a) => sum + Math.round(Number(a.amount) || 0), 0);
+    const requested = monthAbonos.reduce((sum, a) => sum + Math.round(Number(a.amount) || 0), 0);
+    const extra = Math.min(requested, balance - cuotaMes);
     balance = Math.max(0, balance - cuotaMes - extra);
     schedule.push({ index, cuota: cuotaMes, extra, balance });
     future -= 1;
@@ -1668,6 +1677,121 @@ function debtMonth(spec, year, month) {
   return { ...row, current: pos + 1, total: proj.schedule.length };
 }
 
+function paidInLoadedMonth(field, id, year, month) {
+  const period = loadedPeriod();
+  if (!period || period.year !== year || period.month !== month) return 0;
+  return expenses.reduce((sum, e) => (e[field] === id && e.done ? sum + (Number(e.amount) || 0) : sum), 0);
+}
+
+function debtOwedNow(spec, year, month, paid) {
+  const row = debtMonth(spec, year, month);
+  if (!row) return debtOwed(spec, year, month);
+  const due = row.cuota + row.extra;
+  return row.balance + Math.max(0, due - (paid || 0));
+}
+
+function creditOwedNow(credit, year, month) {
+  return debtOwedNow(debtSpecFromCredit(credit), year, month, paidInLoadedMonth('creditId', credit.id, year, month));
+}
+
+function cardOwedNow(card, year, month) {
+  let after = 0;
+  let installmentsDue = 0;
+  (card.movements || []).forEach(mv => {
+    if (mv.billing === 'monthly') return;
+    const spec = debtSpecFromPurchase(mv);
+    const row = debtMonth(spec, year, month);
+    if (row) {
+      after += row.balance;
+      installmentsDue += row.cuota + row.extra;
+    } else {
+      after += debtOwed(spec, year, month);
+    }
+  });
+  const pending = Math.max(0, cardMonthTotal(card, year, month) - paidInLoadedMonth('cardId', card.id, year, month));
+  return after + Math.min(pending, installmentsDue);
+}
+
+function syncDebtAbonoLine(field, id, name, dueAmount) {
+  const main = expenses.find(e => e[field] === id && !e.abonoLine);
+  const idx = expenses.findIndex(e => e[field] === id && e.abonoLine && !e.done);
+  const now = Date.now();
+  const doneSum = expenses.reduce((sum, e) => (e[field] === id && e.done ? sum + (Number(e.amount) || 0) : sum), 0);
+  const diff = main && main.done ? dueAmount - doneSum : 0;
+  if (diff > 0) {
+    if (idx === -1) {
+      expenses.push({
+        name: `Abono ${name}`,
+        amount: diff,
+        movement: 'expense',
+        type: 'fixed',
+        concept: 'salary',
+        tags: [],
+        done: false,
+        [field]: id,
+        abonoLine: true,
+        createdAt: now,
+        updatedAt: now
+      });
+      return true;
+    }
+    const line = expenses[idx];
+    if (Number(line.amount) !== diff) {
+      line.amount = diff;
+      line.updatedAt = now;
+      return true;
+    }
+    return false;
+  }
+  if (idx !== -1) {
+    expenses.splice(idx, 1);
+    return true;
+  }
+  return false;
+}
+
+function removeMonthAbonos(line) {
+  const period = loadedPeriod();
+  if (!period) return;
+  const owners = line.creditId
+    ? [credits.find(c => c.id === line.creditId)].filter(Boolean)
+    : ((cards.find(c => c.id === line.cardId) || {}).movements || []);
+  const candidates = [];
+  owners.forEach(owner => (owner.abonos || []).forEach((a, pos) => {
+    if (Number(a.year) === period.year && Number(a.month) === period.month) {
+      candidates.push({ owner, a, order: Number(a.createdAt) || pos });
+    }
+  }));
+  candidates.sort((x, y) => y.order - x.order);
+  let left = Number(line.amount) || 0;
+  candidates.forEach(({ owner, a }) => {
+    if (left <= 0) return;
+    left -= Number(a.amount) || 0;
+    owner.abonos = owner.abonos.filter(item => item !== a);
+  });
+  expenses = expenses.filter(e => e !== line);
+  if (line.creditId) {
+    saveCredits();
+    syncActiveCreditExpenses();
+    renderCreditsModal();
+  } else {
+    saveCards();
+    syncCardExpenses();
+    renderCardsModal();
+  }
+  saveData();
+  render();
+}
+
+function doneAbonoLinesSum(field, id) {
+  return expenses.reduce((sum, e) => (e[field] === id && e.abonoLine && e.done ? sum + (Number(e.amount) || 0) : sum), 0);
+}
+
+function liquidationOptions(spec, year, month) {
+  const row = debtMonth(spec, year, month);
+  return row ? { row, amount: row.balance } : null;
+}
+
 function creditAppliesToPeriod(credit, year, month) {
   if (!credit || credit.active === false) return false;
   return !!debtMonth(debtSpecFromCredit(credit), year, month);
@@ -1685,8 +1809,8 @@ function syncActiveCreditExpenses() {
     if (dismissedCreditIds.includes(c.id)) return;
     const due = debtMonth(debtSpecFromCredit(c), period.year, period.month);
     if (!due) return;
-    const dueAmount = due.cuota + due.extra;
-    let idx = expenses.findIndex(e => e.creditId === c.id);
+    const dueAmount = Math.max(0, due.cuota + due.extra - doneAbonoLinesSum('creditId', c.id));
+    let idx = expenses.findIndex(e => e.creditId === c.id && !e.abonoLine);
     if (idx === -1) {
       const nameKey = String(c.name || '').trim().toLowerCase();
       idx = expenses.findIndex(e =>
@@ -1731,6 +1855,12 @@ function syncActiveCreditExpenses() {
       e.updatedAt = now;
       changed = true;
     }
+  });
+
+  applicable.forEach(c => {
+    if (dismissedCreditIds.includes(c.id)) return;
+    const due = debtMonth(debtSpecFromCredit(c), period.year, period.month);
+    if (due && syncDebtAbonoLine('creditId', c.id, c.name, due.cuota + due.extra)) changed = true;
   });
 
   const before = expenses.length;
@@ -1822,8 +1952,8 @@ function syncCardExpenses() {
 
   applicable.forEach(card => {
     if (dismissedCardIds.includes(card.id)) return;
-    const total = cardMonthTotal(card, period.year, period.month);
-    let idx = expenses.findIndex(e => e.cardId === card.id);
+    const total = Math.max(0, cardMonthTotal(card, period.year, period.month) - doneAbonoLinesSum('cardId', card.id));
+    let idx = expenses.findIndex(e => e.cardId === card.id && !e.abonoLine);
     if (idx === -1) {
       const nameKey = String(card.name || '').trim().toLowerCase();
       idx = expenses.findIndex(e =>
@@ -1866,6 +1996,11 @@ function syncCardExpenses() {
       e.updatedAt = now;
       changed = true;
     }
+  });
+
+  applicable.forEach(card => {
+    if (dismissedCardIds.includes(card.id)) return;
+    if (syncDebtAbonoLine('cardId', card.id, card.name, cardMonthTotal(card, period.year, period.month))) changed = true;
   });
 
   const before = expenses.length;
@@ -1926,9 +2061,11 @@ function abonoHistoryHtml(abonos, attrs, simple) {
   if (!list.length) return '';
   const total = list.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   const rows = list.map(a => {
-    const effect = simple || a.mode === 'abono'
-      ? 'Pago parcial'
-      : (a.mode === 'cuota' ? 'Baja la cuota' : 'Acorta el plazo');
+    const effect = a.liquidation
+      ? 'Liquida la deuda'
+      : (simple || a.mode === 'abono'
+        ? 'Pago parcial'
+        : (a.mode === 'cuota' ? 'Baja la cuota' : 'Acorta el plazo'));
     return `<div class="abono-row">
       <div>
         <div class="amount">${formatCOP(Number(a.amount) || 0)}</div>
@@ -1949,9 +2086,17 @@ function openAbonoModal(kind, ownerId, movementId) {
   const period = loadedPeriod() || { year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
   const simple = kind === 'purchase';
   document.getElementById('abonoModeWrap').hidden = simple;
-  document.getElementById('abonoHint').textContent = simple
+  const target = kind === 'credit'
+    ? credits.find(c => c.id === ownerId)
+    : ((cards.find(c => c.id === ownerId) || {}).movements || []).find(mv => mv.id === movementId);
+  const row = target ? debtMonth(kind === 'credit' ? debtSpecFromCredit(target) : debtSpecFromPurchase(target), period.year, period.month) : null;
+  const base = simple
     ? 'Pago parcial. Se resta del saldo y la cuota del mes sigue igual hasta que se acabe.'
     : 'Abono extra. Plazo mantiene la cuota y termina antes. Cuota mantiene los meses y baja el valor.';
+  const limit = row
+    ? ` Después de la cuota de ${periodLabel(period.year, period.month)} (${formatCOP(row.cuota)})${row.extra ? ` y de los abonos ya registrados (${formatCOP(row.extra)})` : ''} quedan ${formatCOP(row.balance)}: ese es el máximo para abonar.`
+    : '';
+  document.getElementById('abonoHint').textContent = base + limit;
   document.getElementById('abonoAmount').value = '';
   document.getElementById('abonoMonth').value = String(period.month);
   document.getElementById('abonoYear').value = period.year;
@@ -2009,13 +2154,27 @@ function submitAbonoModal() {
     : (document.getElementById('abonoMode').value === 'cuota' ? 'cuota' : 'plazo');
   if (!amount || !year || !month) return;
   const spec = kind === 'credit' ? debtSpecFromCredit(target) : debtSpecFromPurchase(target);
-  const preview = projectDebt(spec);
-  if (!preview.schedule.some(row => row.index === periodIndex(year, month))) {
+  const row = debtMonth(spec, year, month);
+  if (!row) {
     alert('Ese mes la deuda ya no tiene cuota.');
     return;
   }
+  let finalAmount = amount;
+  let liquidation = false;
+  if (row.balance <= 0) {
+    alert(`Con la cuota de ${periodLabel(year, month)} la deuda ya queda en $0. No hace falta abonar.`);
+    return;
+  }
+  if (amount >= row.balance) {
+    const ok = confirm(`Después de la cuota de ${periodLabel(year, month)} quedan ${formatCOP(row.balance)}. ¿Abonar ${formatCOP(row.balance)} y liquidar la deuda?`);
+    if (!ok) return;
+    finalAmount = row.balance;
+    liquidation = true;
+  }
   if (!target.abonos) target.abonos = [];
-  target.abonos.push({ id: newRecordId(), amount, year, month, mode });
+  const record = { id: newRecordId(), amount: finalAmount, year, month, mode, createdAt: Date.now() };
+  if (liquidation) record.liquidation = true;
+  target.abonos.push(record);
   closeAbonoModal();
   if (kind === 'credit') saveCredits();
   else {
@@ -2029,6 +2188,94 @@ function submitAbonoModal() {
   }
   if (kind === 'credit') renderCreditsModal();
   else renderCardsModal();
+}
+
+function afterDebtChange(kind, ownerId) {
+  if (kind === 'credit') saveCredits();
+  else {
+    expandedCardMoves.add(ownerId);
+    saveCards();
+  }
+  if (currentKey) {
+    if (kind === 'credit') syncActiveCreditExpenses();
+    else syncCardExpenses();
+    render();
+  }
+  if (kind === 'credit') renderCreditsModal();
+  else renderCardsModal();
+}
+
+function liquidationMessage(name, period, parts, total) {
+  const lines = parts.filter(p => p[1] > 0).map(p => `${p[0]}: ${formatCOP(p[1])}`).join('\n');
+  return `Liquidar ${name} en ${periodLabel(period.year, period.month)}\n\n${lines}\n\nTotal de este mes: ${formatCOP(total)}. La deuda queda en $0.\nSi la cuota ya estaba finalizada, el saldo entra como un movimiento de abono aparte.`;
+}
+
+function liquidateCredit(id) {
+  const credit = credits.find(c => c.id === id);
+  const period = loadedPeriod();
+  if (!credit || !period) return;
+  const opt = liquidationOptions(debtSpecFromCredit(credit), period.year, period.month);
+  if (!opt) {
+    alert(`En ${periodLabel(period.year, period.month)} este crédito no tiene cuota.`);
+    return;
+  }
+  if (opt.amount <= 0) {
+    alert('Con la cuota de este mes el crédito ya queda pagado.');
+    return;
+  }
+  const total = opt.row.cuota + opt.row.extra + opt.amount;
+  const msg = liquidationMessage(credit.name, period, [
+    ['Cuota del mes', opt.row.cuota],
+    ['Abonos ya registrados', opt.row.extra],
+    ['Saldo restante', opt.amount]
+  ], total);
+  if (!confirm(msg)) return;
+  if (!credit.abonos) credit.abonos = [];
+  credit.abonos.push({ id: newRecordId(), amount: opt.amount, year: period.year, month: period.month, mode: 'plazo', liquidation: true, createdAt: Date.now() });
+  afterDebtChange('credit', id);
+}
+
+function purchaseLiquidation(mv, period) {
+  if (!mv || mv.billing === 'monthly') return null;
+  const opt = liquidationOptions(debtSpecFromPurchase(mv), period.year, period.month);
+  return opt && opt.amount > 0 ? opt : null;
+}
+
+function liquidatePurchases(card, list, period) {
+  const plans = list.map(mv => ({ mv, opt: purchaseLiquidation(mv, period) })).filter(p => p.opt);
+  if (!plans.length) {
+    alert('No hay saldo pendiente para liquidar en este mes.');
+    return;
+  }
+  const cuotas = plans.reduce((s, p) => s + p.opt.row.cuota, 0);
+  const extras = plans.reduce((s, p) => s + p.opt.row.extra, 0);
+  const rest = plans.reduce((s, p) => s + p.opt.amount, 0);
+  const name = plans.length === 1 ? `${plans[0].mv.concept} (${card.name})` : card.name;
+  const msg = liquidationMessage(name, period, [
+    [plans.length === 1 ? 'Cuota del mes' : 'Cuotas del mes', cuotas],
+    ['Abonos ya registrados', extras],
+    ['Saldo restante', rest]
+  ], cuotas + extras + rest);
+  if (!confirm(msg)) return;
+  plans.forEach(({ mv, opt }) => {
+    if (!mv.abonos) mv.abonos = [];
+    mv.abonos.push({ id: newRecordId(), amount: opt.amount, year: period.year, month: period.month, mode: 'abono', liquidation: true, createdAt: Date.now() });
+  });
+  afterDebtChange('purchase', card.id);
+}
+
+function liquidateCard(cardId) {
+  const card = cards.find(c => c.id === cardId);
+  const period = loadedPeriod();
+  if (!card || !period) return;
+  liquidatePurchases(card, card.movements || [], period);
+}
+
+function liquidatePurchase(cardId, movementId) {
+  const card = cards.find(c => c.id === cardId);
+  const period = loadedPeriod();
+  if (!card || !period) return;
+  liquidatePurchases(card, (card.movements || []).filter(mv => mv.id === movementId), period);
 }
 
 function renderCardsModal() {
@@ -2069,6 +2316,7 @@ function renderCardsModal() {
           <div class="actions" style="margin-top:0.35rem;">
             <button type="button" class="btn-secondary" data-card-action="edit-movement" data-card-id="${escapeHtml(card.id)}" data-movement-id="${escapeHtml(mv.id)}">Editar</button>
             ${monthly ? '' : `<button type="button" class="btn-secondary" data-abono-action="open" ${abonoAttrs}>Abonar</button>`}
+            ${!monthly && loadedPeriod() && purchaseLiquidation(mv, period) ? `<button type="button" class="btn-secondary" data-card-action="liquidate-movement" data-card-id="${escapeHtml(card.id)}" data-movement-id="${escapeHtml(mv.id)}">Liquidar</button>` : ''}
             <button type="button" class="btn-danger" data-card-action="delete-movement" data-card-id="${escapeHtml(card.id)}" data-movement-id="${escapeHtml(mv.id)}">Quitar</button>
           </div>
           ${monthly ? '' : abonoHistoryHtml(mv.abonos, abonoAttrs, true)}
@@ -2078,7 +2326,7 @@ function renderCardsModal() {
     return `<div class="credit-item" data-card-root="${escapeHtml(card.id)}">
       <div style="flex:1 1 220px;">
         <strong>${escapeHtml(card.name)}</strong> ${activeLabel}
-        <div class="owed">Se debe ${formatCOP(cardOwed(card, period.year, period.month))}</div>
+        <div class="owed">Se debe ${formatCOP(cardOwedNow(card, period.year, period.month))}</div>
         <div class="meta">Cuota de este mes ${formatCOP(total)}</div>
         ${omitted ? '<div class="meta">Omitida en el mes cargado</div>' : ''}
         <button type="button" class="moves-toggle" data-card-action="toggle-moves" data-card-id="${escapeHtml(card.id)}" aria-expanded="${expandedCardMoves.has(card.id) ? 'true' : 'false'}">${expandedCardMoves.has(card.id) ? 'Ocultar compras' : 'Mostrar compras'} (${(card.movements || []).length})</button>
@@ -2087,6 +2335,7 @@ function renderCardsModal() {
         </div>
         <div class="actions" style="margin-top:0.55rem;">
           <button type="button" data-card-action="add-movement" data-card-id="${escapeHtml(card.id)}">Agregar compra</button>
+          ${loadedPeriod() && (card.movements || []).some(mv => purchaseLiquidation(mv, period)) ? `<button type="button" class="btn-secondary" data-card-action="liquidate" data-card-id="${escapeHtml(card.id)}">Liquidar tarjeta</button>` : ''}
           ${omitted ? `<button type="button" data-card-action="include" data-card-id="${escapeHtml(card.id)}">Incluir en este mes</button>` : ''}
           <button type="button" class="btn-secondary" data-card-action="toggle" data-card-id="${escapeHtml(card.id)}">${card.active === false ? 'Activar' : 'Pausar'}</button>
           <button type="button" class="btn-danger" data-card-action="delete-card" data-card-id="${escapeHtml(card.id)}">Eliminar tarjeta</button>
@@ -2238,7 +2487,7 @@ function creditPaymentStats(creditId) {
       const data = JSON.parse(localStorage.getItem(key) || '{}');
       (data.expenses || []).forEach(item => {
         if (item.creditId !== creditId || !item.done) return;
-        paidCount += 1;
+        if (!item.abonoLine) paidCount += 1;
         paidAmount += Number(item.amount) || 0;
       });
     } catch (_) {}
@@ -2256,12 +2505,17 @@ function creditProgress(credit) {
   const proj = projectDebt(debtSpecFromCredit(credit));
   const originalCuota = Number(credit.amount) || 0;
   const installments = proj.schedule.length || Number(credit.installments) || 0;
-  const remainingAmount = debtOwed(debtSpecFromCredit(credit), period.year, period.month);
+  const remainingAmount = creditOwedNow(credit, period.year, period.month);
   let current = 0;
   let remainingCount = installments;
   if (due) {
     current = due.current;
     remainingCount = due.total - due.current + 1;
+    const loaded = loadedPeriod();
+    const main = loaded && loaded.year === period.year && loaded.month === period.month
+      ? expenses.find(e => e.creditId === credit.id && !e.abonoLine)
+      : null;
+    if (main && main.done) remainingCount -= 1;
   } else if (proj.schedule.length && periodIndex(period.year, period.month) > proj.schedule[proj.schedule.length - 1].index) {
     current = proj.schedule.length;
     remainingCount = 0;
@@ -2297,10 +2551,19 @@ function renderCreditsModal() {
         ? `Vas en la cuota ${progress.current} de ${progress.installments}`
         : `Vas en la cuota ${progress.current}`);
     const paidLabel = `Pagado ${formatCOP(progress.paidAmount)} (${progress.paidCount} ${progress.paidCount === 1 ? 'cuota' : 'cuotas'})`;
-    const leftLabel = `Faltan ${progress.remainingCount} ${progress.remainingCount === 1 ? 'cuota' : 'cuotas'}`;
+    const pendingAbono = period ? expenses.find(e => e.creditId === c.id && e.abonoLine && !e.done) : null;
+    const leftLabel = progress.remainingAmount <= 0
+      ? 'Deuda pagada'
+      : [
+          progress.remainingCount > 0 ? `Faltan ${progress.remainingCount} ${progress.remainingCount === 1 ? 'cuota' : 'cuotas'}` : '',
+          pendingAbono ? `Abono de ${formatCOP(pendingAbono.amount)} por finalizar en Movimientos` : ''
+        ].filter(Boolean).join(' · ');
+    const liq = period && c.active !== false ? liquidationOptions(debtSpecFromCredit(c), period.year, period.month) : null;
+    const canLiquidate = !!(liq && liq.amount > 0);
     const actions = [
       `<button type="button" class="btn-secondary" data-credit-action="edit" data-credit-id="${escapeHtml(c.id)}">Editar</button>`,
       `<button type="button" class="btn-secondary" data-abono-action="open" data-abono-kind="credit" data-owner-id="${escapeHtml(c.id)}">Abonar</button>`,
+      canLiquidate ? `<button type="button" class="btn-secondary" data-credit-action="liquidate" data-credit-id="${escapeHtml(c.id)}">Liquidar</button>` : '',
       `<button type="button" class="btn-secondary" data-credit-action="toggle" data-credit-id="${escapeHtml(c.id)}">${c.active === false ? 'Activar' : 'Pausar'}</button>`,
       omitted ? `<button type="button" data-credit-action="include" data-credit-id="${escapeHtml(c.id)}">Incluir en este mes</button>` : '',
       `<button type="button" class="btn-danger" data-credit-action="delete" data-credit-id="${escapeHtml(c.id)}">Eliminar</button>`
@@ -2644,7 +2907,7 @@ function renderCarryHint() {
 }
 
 function copyExpensesFromMonth(source, baseTs) {
-  return (source || []).filter(e => !e.carryFrom).map(e => {
+  return (source || []).filter(e => !e.carryFrom && !e.abonoLine).map(e => {
     const copy = {
       name: e.name,
       amount: Number(e.amount) || 0,
@@ -2736,7 +2999,8 @@ document.getElementById("creditsList").addEventListener("click", ev => {
   if (!btn) return;
   const id = btn.getAttribute("data-credit-id");
   const action = btn.getAttribute("data-credit-action");
-  if (action === "edit") editCredit(id);
+  if (action === "liquidate") liquidateCredit(id);
+  else if (action === "edit") editCredit(id);
   else if (action === "toggle") toggleCreditActive(id);
   else if (action === "include") includeCreditThisMonth(id);
   else if (action === "delete") openCreditDelete(id);
@@ -2753,7 +3017,9 @@ document.getElementById("cardsList").addEventListener("click", ev => {
   const cardId = btn.getAttribute("data-card-id");
   const movementId = btn.getAttribute("data-movement-id");
   const action = btn.getAttribute("data-card-action");
-  if (action === "add-movement") openPurchaseModal(cardId);
+  if (action === "liquidate") liquidateCard(cardId);
+  else if (action === "liquidate-movement") liquidatePurchase(cardId, movementId);
+  else if (action === "add-movement") openPurchaseModal(cardId);
   else if (action === "edit-movement") openPurchaseModal(cardId, movementId);
   else if (action === "toggle-moves") {
     if (expandedCardMoves.has(cardId)) expandedCardMoves.delete(cardId);
@@ -3117,7 +3383,7 @@ function render(){
           <div>
             <strong class="move-title">${escapeHtml(e.name)}</strong>
             <span class="kind-pill ${kindPill}">${translations[movement]}</span>
-            ${e.creditId ? '<span class="tag-pill">cuota</span>' : ''}${e.cardId ? '<span class="tag-pill">tarjeta</span>' : ''}${e.carryFrom ? '<span class="tag-pill">sobrante</span>' : ''}
+            ${e.abonoLine ? '<span class="tag-pill">abono</span>' : ''}${e.creditId && !e.abonoLine ? '<span class="tag-pill">cuota</span>' : ''}${e.cardId && !e.abonoLine ? '<span class="tag-pill">tarjeta</span>' : ''}${e.carryFrom ? '<span class="tag-pill">sobrante</span>' : ''}
           </div>
           <div class="move-amount">${formatCOP(e.amount)}</div>
         </div>
@@ -3130,7 +3396,7 @@ function render(){
         </div>
         <div class="move-actions">
           <button type="button" class="btn-mark ${e.done?'is-done':''}" onclick="toggleDone(${i})">${doneLabel}</button>
-          ${e.carryFrom ? '' : `<button type="button" class="btn-secondary" onclick="openMovementModal('edit', ${i})">Editar</button>`}
+          ${e.carryFrom || e.abonoLine ? '' : `<button type="button" class="btn-secondary" onclick="openMovementModal('edit', ${i})">Editar</button>`}
           <button type="button" class="btn-danger" onclick="openDeleteConfirmModal(${i})">Eliminar</button>
         </div>
       </article>`;
