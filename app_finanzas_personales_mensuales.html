@@ -1008,9 +1008,9 @@
         <label for="searchMovements" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Buscar</label>
         <input id="searchMovements" type="search" placeholder="Buscar: nombre, etiqueta, tipo…" aria-label="Buscar movimientos" />
         <select id="filterDone" style="width:auto;">
-          <option value="all">Todos</option>
+          <option value="all" selected>Todos</option>
           <option value="done">Solo finalizados</option>
-          <option value="pending" selected>Solo pendientes</option>
+          <option value="pending">Solo pendientes</option>
           <option value="disabled">Solo inhabilitados</option>
         </select>
         <button type="button" class="btn-secondary" onclick="setAllDone(true)" style="width:auto;white-space:nowrap;">Finalizar todos</button>
