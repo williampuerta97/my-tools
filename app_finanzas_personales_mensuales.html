@@ -1072,7 +1072,9 @@
     <div class="card">
       <h3>Copia de seguridad</h3>
       <p>Un solo archivo con todo: todos los meses, créditos, tarjetas (con compras y abonos) y tus preferencias de tema y detalle.</p>
+      <p>Los datos se guardan en IndexedDB de este navegador. También se importan los respaldos JSON existentes.</p>
       <p id="backupSummary" style="margin:0 0 0.6rem;font-size:0.78rem;color:var(--muted);"></p>
+      <p id="storageStatus" role="status" style="margin:0 0 0.6rem;font-size:0.78rem;color:var(--muted);"></p>
       <div class="form-grid">
         <div>
           <label>Al importar</label>
@@ -1461,6 +1463,168 @@ const translations = {
 const STORAGE_PREFIX = 'finanzas-';
 const CREDITS_KEY = 'finanzas-creditos';
 const CARDS_KEY = 'finanzas-tarjetas';
+function isFinanzasStorageKey(key) {
+  return key.startsWith(STORAGE_PREFIX) || key === 'finanzasTheme' || key === 'finanzasMoveDetail';
+}
+const FINANZAS_DB_NAME = 'finanzas-mensuales';
+const FINANZAS_DB_VERSION = 1;
+const FINANZAS_STORE_NAME = 'entries';
+const finanzasCache = new Map();
+let finanzasDb = null;
+let finanzasStorageReady = false;
+let finanzasWriteQueue = Promise.resolve();
+let finanzasStorageError = null;
+
+try {
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key !== null) finanzasCache.set(key, localStorage.getItem(key));
+  }
+} catch (err) {
+  console.error('No se pudo leer el almacenamiento local existente.', err);
+}
+
+function reportFinanzasStorageError(err) {
+  finanzasStorageError = err;
+  console.error('No se pudo guardar en IndexedDB.', err);
+  const status = document.getElementById('storageStatus');
+  if (status) status.textContent = 'No se pudo guardar en IndexedDB. Exporta un respaldo y revisa el espacio disponible del navegador.';
+}
+
+function persistFinanzasOperation(operation) {
+  if (!finanzasStorageReady || !finanzasDb) return Promise.resolve();
+  const result = finanzasWriteQueue.then(() => new Promise((resolve, reject) => {
+    const transaction = finanzasDb.transaction(FINANZAS_STORE_NAME, 'readwrite');
+    operation(transaction.objectStore(FINANZAS_STORE_NAME));
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error || new Error('Error de escritura en IndexedDB.'));
+    transaction.onabort = () => reject(transaction.error || new Error('La escritura en IndexedDB fue cancelada.'));
+  }));
+  finanzasWriteQueue = result.catch(reportFinanzasStorageError);
+  return finanzasWriteQueue;
+}
+
+const finanzasStorage = {
+  get length() { return finanzasCache.size; },
+  key(index) { return Array.from(finanzasCache.keys())[index] ?? null; },
+  getItem(key) {
+    const normalizedKey = String(key);
+    return finanzasCache.has(normalizedKey) ? finanzasCache.get(normalizedKey) : null;
+  },
+  setItem(key, value) {
+    const normalizedKey = String(key);
+    const normalizedValue = String(value);
+    finanzasCache.set(normalizedKey, normalizedValue);
+    try {
+      localStorage.setItem(normalizedKey, normalizedValue);
+    } catch (err) {
+      console.error('No se pudo actualizar la copia local de los datos.', err);
+    }
+    if (isFinanzasStorageKey(normalizedKey)) {
+      persistFinanzasOperation(store => store.put({ key: normalizedKey, value: normalizedValue }));
+    }
+  },
+  removeItem(key) {
+    const normalizedKey = String(key);
+    finanzasCache.delete(normalizedKey);
+    try {
+      localStorage.removeItem(normalizedKey);
+    } catch (err) {
+      console.error('No se pudo actualizar la copia local de los datos.', err);
+    }
+    if (isFinanzasStorageKey(normalizedKey)) {
+      persistFinanzasOperation(store => store.delete(normalizedKey));
+    }
+  },
+  async ready() {
+    await initializeFinanzasStorage();
+  },
+  async flush() {
+    await finanzasWriteQueue;
+  },
+  hasError() { return finanzasStorageError !== null; },
+  clearError() { finanzasStorageError = null; }
+};
+
+let finanzasInitialization;
+function initializeFinanzasStorage() {
+  if (finanzasInitialization) return finanzasInitialization;
+  finanzasInitialization = (async () => {
+    const status = document.getElementById('storageStatus');
+    if (!('indexedDB' in window)) {
+      finanzasStorageReady = true;
+      if (status) status.textContent = 'IndexedDB no está disponible; se conservan los datos en el almacenamiento local del navegador.';
+      return;
+    }
+
+    try {
+      finanzasDb = await new Promise((resolve, reject) => {
+        const request = indexedDB.open(FINANZAS_DB_NAME, FINANZAS_DB_VERSION);
+        request.onupgradeneeded = () => {
+          if (!request.result.objectStoreNames.contains(FINANZAS_STORE_NAME)) {
+            request.result.createObjectStore(FINANZAS_STORE_NAME, { keyPath: 'key' });
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('No se pudo abrir IndexedDB.'));
+        request.onblocked = () => reject(new Error('IndexedDB está bloqueada por otra pestaña.'));
+      });
+
+      const records = await new Promise((resolve, reject) => {
+        const transaction = finanzasDb.transaction(FINANZAS_STORE_NAME, 'readonly');
+        const request = transaction.objectStore(FINANZAS_STORE_NAME).getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('No se pudieron leer los datos de IndexedDB.'));
+      });
+
+      if (records.length) {
+        for (const key of Array.from(finanzasCache.keys())) {
+          if (isFinanzasStorageKey(key)) finanzasCache.delete(key);
+        }
+        try {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (key && isFinanzasStorageKey(key)) localStorage.removeItem(key);
+          }
+          for (const record of records) {
+            finanzasCache.set(record.key, record.value);
+            localStorage.setItem(record.key, record.value);
+          }
+        } catch (err) {
+          console.error('No se pudo sincronizar la copia local de los datos.', err);
+        }
+        finanzasStorageReady = true;
+        loadCredits();
+        loadCards();
+        applyImportedPreferences();
+        loadData();
+      } else {
+        const legacyRecords = Array.from(finanzasCache.entries())
+          .filter(([key]) => isFinanzasStorageKey(key))
+          .map(([key, value]) => ({ key, value }));
+        if (legacyRecords.length) {
+          await new Promise((resolve, reject) => {
+            const transaction = finanzasDb.transaction(FINANZAS_STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(FINANZAS_STORE_NAME);
+            legacyRecords.forEach(record => store.put(record));
+            transaction.oncomplete = resolve;
+            transaction.onerror = () => reject(transaction.error || new Error('No se pudieron migrar los datos existentes.'));
+            transaction.onabort = () => reject(transaction.error || new Error('La migración a IndexedDB fue cancelada.'));
+          });
+        }
+        finanzasStorageReady = true;
+      }
+      if (status) status.textContent = 'Almacenamiento activo: IndexedDB. Los datos existentes se conservaron.';
+    } catch (err) {
+      finanzasDb = null;
+      finanzasStorageReady = true;
+      console.error('No se pudo activar IndexedDB; se conservará el almacenamiento local.', err);
+      if (status) status.textContent = 'No se pudo activar IndexedDB; se usan los datos locales. Exporta un respaldo por seguridad.';
+    }
+  })();
+  return finanzasInitialization;
+}
+
 const MONTH_NAMES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 function parseTags(str) {
@@ -1659,7 +1823,7 @@ function confirmDeleteExpense() {
 
 function loadCredits() {
   try {
-    const raw = localStorage.getItem(CREDITS_KEY);
+    const raw = finanzasStorage.getItem(CREDITS_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
     credits = Array.isArray(parsed) ? parsed : [];
   } catch (_) {
@@ -1668,7 +1832,7 @@ function loadCredits() {
 }
 
 function saveCredits() {
-  localStorage.setItem(CREDITS_KEY, JSON.stringify(credits));
+  finanzasStorage.setItem(CREDITS_KEY, JSON.stringify(credits));
   updateCreditsButton();
 }
 
@@ -1794,6 +1958,42 @@ function debtOwed(spec, year, month) {
   if (index > last.index) return proj.pendingBalance;
   const before = schedule.filter(item => item.index < index);
   return before[before.length - 1].balance;
+}
+
+function disabledFromIndex(item) {
+  return item && item.disabledFromYear ? periodIndex(item.disabledFromYear, item.disabledFromMonth) : 0;
+}
+
+function purchaseCutoff(card, mv) {
+  const a = disabledFromIndex(card);
+  const b = disabledFromIndex(mv);
+  return a && b ? Math.min(a, b) : (a || b);
+}
+
+function purchaseActiveAt(card, mv, year, month) {
+  const cut = purchaseCutoff(card, mv);
+  return !cut || periodIndex(year, month) < cut;
+}
+
+function purchaseDroppedBalance(card, mv) {
+  const cut = purchaseCutoff(card, mv);
+  if (!cut || mv.billing === 'monthly') return 0;
+  const schedule = projectDebt(debtSpecFromPurchase(mv)).schedule;
+  if (!schedule.length) return 0;
+  const before = schedule.filter(row => row.index < cut);
+  if (before.length) return before[before.length - 1].balance;
+  const first = schedule[0];
+  return first.balance + first.cuota + first.extra;
+}
+
+function purchaseMonth(card, mv, year, month) {
+  if (mv.billing === 'monthly' || !purchaseActiveAt(card, mv, year, month)) return null;
+  return debtMonth(debtSpecFromPurchase(mv), year, month);
+}
+
+function purchaseOwed(card, mv, year, month) {
+  if (mv.billing === 'monthly' || !purchaseActiveAt(card, mv, year, month)) return 0;
+  return Math.max(0, debtOwed(debtSpecFromPurchase(mv), year, month) - purchaseDroppedBalance(card, mv));
 }
 
 function disabledFromIndex(item) {
@@ -2053,7 +2253,7 @@ function newRecordId() {
 
 function loadCards() {
   try {
-    const raw = localStorage.getItem(CARDS_KEY);
+    const raw = finanzasStorage.getItem(CARDS_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
     cards = Array.isArray(parsed) ? parsed : [];
   } catch (_) {
@@ -2065,7 +2265,7 @@ function loadCards() {
 }
 
 function saveCards() {
-  localStorage.setItem(CARDS_KEY, JSON.stringify(cards));
+  finanzasStorage.setItem(CARDS_KEY, JSON.stringify(cards));
   updateCardsButton();
 }
 
@@ -2834,11 +3034,11 @@ function closeCreditsModal() {
 function creditPaymentStats(creditId) {
   let paidCount = 0;
   let paidAmount = 0;
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
+  for (let i = 0; i < finanzasStorage.length; i++) {
+    const key = finanzasStorage.key(i);
     if (!key || !/^finanzas-\d+-\d+$/.test(key)) continue;
     try {
-      const data = JSON.parse(localStorage.getItem(key) || '{}');
+      const data = JSON.parse(finanzasStorage.getItem(key) || '{}');
       (data.expenses || []).forEach(item => {
         if (item.creditId !== creditId || !countsAsDone(item)) return;
         if (!item.abonoLine) paidCount += 1;
@@ -3062,13 +3262,13 @@ function getKey(){
 function findPreviousMonthData(year, month) {
   const target = periodIndex(year, month);
   let best = null;
-  for (let i = 0; i < localStorage.length; i++) {
-    const match = /^finanzas-(\d+)-(\d+)$/.exec(localStorage.key(i) || '');
+  for (let i = 0; i < finanzasStorage.length; i++) {
+    const match = /^finanzas-(\d+)-(\d+)$/.exec(finanzasStorage.key(i) || '');
     if (!match) continue;
     const idx = periodIndex(Number(match[1]), Number(match[2]));
     if (idx >= target || (best && idx <= best.idx)) continue;
     try {
-      const data = JSON.parse(localStorage.getItem(localStorage.key(i)) || '');
+      const data = JSON.parse(finanzasStorage.getItem(finanzasStorage.key(i)) || '');
       if (!data || !Array.isArray(data.expenses)) continue;
       best = { idx, data };
     } catch (_) {}
@@ -3101,7 +3301,7 @@ function nextPeriod(year, month) {
 
 function readMonthData(year, month) {
   try {
-    const data = JSON.parse(localStorage.getItem(`finanzas-${year}-${month}`) || 'null');
+    const data = JSON.parse(finanzasStorage.getItem(`finanzas-${year}-${month}`) || 'null');
     return data && Array.isArray(data.expenses) ? data : null;
   } catch (_) {
     return null;
@@ -3297,7 +3497,7 @@ function copyExpensesFromMonth(source, baseTs) {
 
 function loadData(){
   currentKey = getKey();
-  const dataRaw = localStorage.getItem(currentKey);
+  const dataRaw = finanzasStorage.getItem(currentKey);
   const baseTs = getMonthStartTimestamp();
 
   if(!dataRaw){
@@ -3342,7 +3542,7 @@ function loadData(){
 function saveData(){
   const data = { expenses, salary, dismissedCreditIds, dismissedCardIds };
   if (carryDismissed) data.carryDismissed = true;
-  localStorage.setItem(currentKey, JSON.stringify(data));
+  finanzasStorage.setItem(currentKey, JSON.stringify(data));
 }
 
 document.getElementById("mAmount").addEventListener("input", e => {
@@ -3500,9 +3700,9 @@ document.getElementById("importFile").addEventListener("change", e => {
   if (!file) return;
   const mode = document.getElementById("importMode").value;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
-      const summary = importFinanzasBackupText(reader.result, mode);
+      const summary = await importFinanzasBackupText(reader.result, mode);
       loadCredits();
       loadCards();
       applyImportedPreferences();
@@ -3520,10 +3720,10 @@ document.getElementById("importFile").addEventListener("change", e => {
 
 function collectFinanzasFromStorage(){
   const entries = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
+  for (let i = 0; i < finanzasStorage.length; i++) {
+    const key = finanzasStorage.key(i);
     if (!key || !key.startsWith(STORAGE_PREFIX)) continue;
-    const raw = localStorage.getItem(key);
+    const raw = finanzasStorage.getItem(key);
     if (raw == null) continue;
     try {
       entries[key] = JSON.parse(raw);
@@ -3554,11 +3754,18 @@ function summaryText(s){
   return `${plural(s.months, 'mes', 'meses')}, ${plural(s.credits, 'crédito', 'créditos')} y ${plural(s.cards, 'tarjeta', 'tarjetas')}`;
 }
 
-function exportFinanzasBackup(){
+async function exportFinanzasBackup(){
+  try {
+    await finanzasStorage.ready();
+    await finanzasStorage.flush();
+  } catch (err) {
+    alert("No se pudo preparar el respaldo: " + (err && err.message ? err.message : String(err)));
+    return;
+  }
   const entries = collectFinanzasFromStorage();
   const preferences = {};
   PREFERENCE_KEYS.forEach(k => {
-    const v = localStorage.getItem(k);
+    const v = finanzasStorage.getItem(k);
     if (v != null) preferences[k] = v;
   });
   const summary = summarizeEntries(entries);
@@ -3598,42 +3805,53 @@ function extractEntriesFromImportObject(obj){
   return out;
 }
 
-function importFinanzasBackupText(text, mode){
+async function importFinanzasBackupText(text, mode){
+  await finanzasStorage.ready();
+  await finanzasStorage.flush();
   const parsed = JSON.parse(text);
   const entries = extractEntriesFromImportObject(parsed);
-  let count = 0;
-  const prefs = parsed && parsed.preferences && typeof parsed.preferences === "object" ? parsed.preferences : null;
-  if (prefs) {
-    PREFERENCE_KEYS.forEach(k => {
-      if (typeof prefs[k] === "string") localStorage.setItem(k, prefs[k]);
+  const writes = Object.keys(entries)
+    .filter(key => key.startsWith(STORAGE_PREFIX))
+    .map(key => {
+      const value = entries[key];
+      const serialized = typeof value === "string" ? value : JSON.stringify(value);
+      JSON.parse(serialized);
+      return [key, serialized];
     });
-  }
+  const prefs = parsed && parsed.preferences && typeof parsed.preferences === "object" ? parsed.preferences : null;
 
+  finanzasStorage.clearError();
   if (mode === "replace") {
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(STORAGE_PREFIX)) localStorage.removeItem(key);
+    for (let i = finanzasStorage.length - 1; i >= 0; i--) {
+      const key = finanzasStorage.key(i);
+      if (key && key.startsWith(STORAGE_PREFIX)) finanzasStorage.removeItem(key);
     }
   }
 
-  for (const key of Object.keys(entries)) {
-    if (!key.startsWith(STORAGE_PREFIX)) continue;
-    const val = entries[key];
-    const str = typeof val === "string" ? val : JSON.stringify(val);
-    JSON.parse(str);
-    localStorage.setItem(key, str);
-    count++;
-  }
+  for (const [key, serialized] of writes) finanzasStorage.setItem(key, serialized);
 
+  await finanzasStorage.flush();
+  if (finanzasStorage.hasError()) {
+    throw new Error('Los datos se importaron localmente, pero IndexedDB no pudo guardar todos los cambios.');
+  }
+  if (prefs) {
+    PREFERENCE_KEYS.forEach(k => {
+      if (typeof prefs[k] === "string") finanzasStorage.setItem(k, prefs[k]);
+    });
+    await finanzasStorage.flush();
+    if (finanzasStorage.hasError()) {
+      throw new Error('Los datos se importaron localmente, pero IndexedDB no pudo guardar las preferencias.');
+    }
+  }
   return summarizeEntries(entries);
 }
 
 function applyImportedPreferences(){
-  const dark = localStorage.getItem("finanzasTheme") === "dark";
+  const dark = finanzasStorage.getItem("finanzasTheme") === "dark";
   document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
   const toggle = document.getElementById("themeToggle");
   if (toggle) toggle.checked = dark;
-  showMoveDetail = localStorage.getItem("finanzasMoveDetail") !== "zen";
+  showMoveDetail = finanzasStorage.getItem("finanzasMoveDetail") !== "zen";
   applyMoveDetailMode();
   applyMoveSortPreference();
 }
@@ -3683,12 +3901,12 @@ function toggleEnabled(i){
 function getGeneralSavings(){
   let general = 0;
 
-  for(let i = 0; i < localStorage.length; i++){
-    const key = localStorage.key(i);
+  for(let i = 0; i < finanzasStorage.length; i++){
+    const key = finanzasStorage.key(i);
     if(!key || !key.startsWith(STORAGE_PREFIX)) continue;
 
     try {
-      const data = JSON.parse(localStorage.getItem(key) || '{}');
+      const data = JSON.parse(finanzasStorage.getItem(key) || '{}');
       const monthExpenses = data.expenses || [];
 
       monthExpenses.forEach(item => {
@@ -3947,7 +4165,7 @@ document.getElementById("sortMoves").addEventListener("change", ev => {
   render();
 });
 
-let showMoveDetail = localStorage.getItem("finanzasMoveDetail") !== "zen";
+let showMoveDetail = finanzasStorage.getItem("finanzasMoveDetail") !== "zen";
 
 function applyMoveDetailMode() {
   const list = document.getElementById("expenseList");
@@ -3960,7 +4178,7 @@ function applyMoveDetailMode() {
 
 document.getElementById("toggleMoveDetail").addEventListener("click", () => {
   showMoveDetail = !showMoveDetail;
-  localStorage.setItem("finanzasMoveDetail", showMoveDetail ? "full" : "zen");
+  finanzasStorage.setItem("finanzasMoveDetail", showMoveDetail ? "full" : "zen");
   applyMoveDetailMode();
 });
 
@@ -3970,7 +4188,7 @@ themeToggle.checked = document.documentElement.getAttribute("data-theme") === "d
 themeToggle.addEventListener("change", () => {
   const dark = themeToggle.checked;
   document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
-  localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
+  finanzasStorage.setItem(THEME_KEY, dark ? "dark" : "light");
 });
 
 const now = new Date();
@@ -3979,6 +4197,7 @@ document.getElementById("month").value = String(now.getMonth() + 1);
 loadCredits();
 loadCards();
 loadData();
+initializeFinanzasStorage();
 </script>
 <script>
   if ('serviceWorker' in navigator) {
