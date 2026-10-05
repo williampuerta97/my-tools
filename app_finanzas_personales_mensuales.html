@@ -635,6 +635,8 @@
     .move-card.is-disabled .move-main,
     .move-card.is-disabled .move-detail { opacity: 0.5; }
     .move-list.zen .move-main .tag-pill.pill-disabled { display: inline-block; }
+    .card-move.is-disabled > div > strong,
+    .card-move.is-disabled .meta { opacity: 0.55; }
     .move-amount {
       font-weight: 700;
       font-variant-numeric: tabular-nums;
@@ -1013,6 +1015,13 @@
           <option value="pending">Solo pendientes</option>
           <option value="disabled">Solo inhabilitados</option>
         </select>
+        <select id="sortMoves" style="width:auto;" aria-label="Ordenar movimientos">
+          <option value="newest" selected>Más nuevos primero</option>
+          <option value="oldest">Más viejos primero</option>
+          <option value="amount-desc">Mayor valor</option>
+          <option value="amount-asc">Menor valor</option>
+          <option value="name">Nombre (A-Z)</option>
+        </select>
         <button type="button" class="btn-secondary" onclick="setAllDone(true)" style="width:auto;white-space:nowrap;">Finalizar todos</button>
         <button type="button" class="btn-secondary" onclick="setAllDone(false)" style="width:auto;white-space:nowrap;">Desmarcar todos</button>
         <button type="button" class="btn-secondary" id="toggleMoveDetail" style="width:auto;white-space:nowrap;">Ocultar detalle</button>
@@ -1287,6 +1296,33 @@
     <div class="modal-footer">
       <button type="button" class="btn-secondary" onclick="closeAbonoModal()">Cancelar</button>
       <button type="button" onclick="submitAbonoModal()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalPauseWrap" class="modal-wrap" hidden>
+  <div class="modal-scrim" onclick="closePauseModal()"></div>
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+    <div class="modal-header">
+      <h2 id="pauseTitle">Pausar deuda</h2>
+      <button type="button" class="modal-close" onclick="closePauseModal()" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="pauseHint" style="margin:0 0 0.85rem;font-size:0.82rem;color:var(--muted);"></p>
+      <div class="form-grid">
+        <div>
+          <label for="pauseMonth" id="pauseMonthLabel">Desde el mes</label>
+          <select id="pauseMonth"></select>
+        </div>
+        <div>
+          <label for="pauseYear">Año</label>
+          <input id="pauseYear" type="number" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" onclick="closePauseModal()">Cancelar</button>
+      <button type="button" id="pauseSubmit" onclick="submitPauseModal()">Pausar</button>
     </div>
   </div>
 </div>
@@ -1657,7 +1693,7 @@ function projectDebt(spec) {
   const cuota0 = Math.round(Number(spec.cuota) || 0);
   const plazo0 = Math.round(Number(spec.installments) || 0);
   const start = periodIndex(spec.startYear, spec.startMonth);
-  if (!cuota0 || !plazo0 || !start) return { schedule: [] };
+  if (!cuota0 || !plazo0 || !start) return { schedule: [], pausedFrom: 0, pendingBalance: 0, pendingInstallments: 0 };
   let balance = cuota0 * plazo0;
   let cuota = cuota0;
   let future = plazo0;
@@ -1665,8 +1701,16 @@ function projectDebt(spec) {
     periodIndex(a.year, a.month) - periodIndex(b.year, b.month)
   );
   const schedule = [];
+  const ranges = pauseRanges(spec.pauses);
+  let index = start;
+  let pausedFrom = 0;
   while (future > 0 && balance > 0 && schedule.length < 600) {
-    const index = start + schedule.length;
+    const pause = ranges.find(r => index >= r.from && index < r.to);
+    if (pause) {
+      if (pause.to === Infinity) { pausedFrom = index; break; }
+      index = pause.to;
+      continue;
+    }
     const cuotaMes = Math.min(cuota, balance);
     const monthAbonos = abonos.filter(a => periodIndex(a.year, a.month) === index);
     const requested = monthAbonos.reduce((sum, a) => sum + Math.round(Number(a.amount) || 0), 0);
@@ -1682,8 +1726,35 @@ function projectDebt(spec) {
           future = Math.ceil(balance / cuota);
         }
     });
+    index += 1;
   }
-  return { schedule };
+  return {
+    schedule,
+    pausedFrom,
+    pendingBalance: pausedFrom ? balance : 0,
+    pendingInstallments: pausedFrom ? future : 0
+  };
+}
+
+function pauseRanges(pauses) {
+  return (pauses || []).map(p => ({
+    from: periodIndex(p.fromYear, p.fromMonth),
+    to: p.toYear ? periodIndex(p.toYear, p.toMonth) : Infinity
+  })).filter(r => r.from && r.to > r.from);
+}
+
+function isPausedAt(item, year, month) {
+  if (!item) return false;
+  const index = periodIndex(year, month);
+  return pauseRanges(item.pauses).some(r => index >= r.from && index < r.to);
+}
+
+function openPauseOf(item) {
+  return ((item && item.pauses) || []).find(p => !p.toYear) || null;
+}
+
+function cardOfPurchase(mv) {
+  return cards.find(card => (card.movements || []).some(item => item === mv || (mv && item.id === mv.id))) || null;
 }
 
 function debtSpecFromCredit(credit) {
@@ -1692,38 +1763,77 @@ function debtSpecFromCredit(credit) {
     installments: credit.installments,
     startYear: credit.startYear,
     startMonth: credit.startMonth,
-    abonos: credit.abonos || []
+    abonos: credit.abonos || [],
+    pauses: credit.pauses || []
   };
 }
 
 function debtSpecFromPurchase(mv) {
+  const card = cardOfPurchase(mv);
   return {
     cuota: mv.amount,
     installments: movementInstallments(mv),
     startYear: mv.startYear,
     startMonth: mv.startMonth,
     abonos: mv.abonos || [],
+    pauses: (card && card.pauses) || [],
     plainAbono: true
   };
 }
 
 function debtOwed(spec, year, month) {
   const proj = projectDebt(spec);
-  if (!proj.schedule.length) return 0;
+  const schedule = proj.schedule;
+  if (!schedule.length) return proj.pendingBalance;
   const index = periodIndex(year, month);
-  const first = proj.schedule[0];
+  const first = schedule[0];
   if (index <= first.index) return first.balance + first.cuota + first.extra;
-  const row = proj.schedule.find(item => item.index === index);
+  const row = schedule.find(item => item.index === index);
   if (row) return row.balance + row.cuota + row.extra;
-  const last = proj.schedule[proj.schedule.length - 1];
-  return index > last.index ? 0 : first.balance + first.cuota + first.extra;
+  const last = schedule[schedule.length - 1];
+  if (index > last.index) return proj.pendingBalance;
+  const before = schedule.filter(item => item.index < index);
+  return before[before.length - 1].balance;
+}
+
+function disabledFromIndex(item) {
+  return item && item.disabledFromYear ? periodIndex(item.disabledFromYear, item.disabledFromMonth) : 0;
+}
+
+function purchaseCutoff(card, mv) {
+  const a = disabledFromIndex(card);
+  const b = disabledFromIndex(mv);
+  return a && b ? Math.min(a, b) : (a || b);
+}
+
+function purchaseActiveAt(card, mv, year, month) {
+  const cut = purchaseCutoff(card, mv);
+  return !cut || periodIndex(year, month) < cut;
+}
+
+function purchaseDroppedBalance(card, mv) {
+  const cut = purchaseCutoff(card, mv);
+  if (!cut || mv.billing === 'monthly') return 0;
+  const schedule = projectDebt(debtSpecFromPurchase(mv)).schedule;
+  if (!schedule.length) return 0;
+  const before = schedule.filter(row => row.index < cut);
+  if (before.length) return before[before.length - 1].balance;
+  const first = schedule[0];
+  return first.balance + first.cuota + first.extra;
+}
+
+function purchaseMonth(card, mv, year, month) {
+  if (mv.billing === 'monthly' || !purchaseActiveAt(card, mv, year, month)) return null;
+  return debtMonth(debtSpecFromPurchase(mv), year, month);
+}
+
+function purchaseOwed(card, mv, year, month) {
+  if (mv.billing === 'monthly' || !purchaseActiveAt(card, mv, year, month)) return 0;
+  return Math.max(0, debtOwed(debtSpecFromPurchase(mv), year, month) - purchaseDroppedBalance(card, mv));
 }
 
 function cardOwed(card, year, month) {
-  return (card.movements || []).reduce((sum, mv) => {
-    if (mv.billing === 'monthly') return sum;
-    return sum + debtOwed(debtSpecFromPurchase(mv), year, month);
-  }, 0);
+  return (card.movements || []).reduce((sum, mv) => sum + purchaseOwed(card, mv, year, month), 0);
 }
 
 function debtMonth(spec, year, month) {
@@ -1731,7 +1841,7 @@ function debtMonth(spec, year, month) {
   const pos = proj.schedule.findIndex(row => row.index === periodIndex(year, month));
   if (pos < 0) return null;
   const row = proj.schedule[pos];
-  return { ...row, current: pos + 1, total: proj.schedule.length };
+  return { ...row, current: pos + 1, total: proj.schedule.length + proj.pendingInstallments };
 }
 
 function isMoveEnabled(e) {
@@ -1764,13 +1874,12 @@ function cardOwedNow(card, year, month) {
   let installmentsDue = 0;
   (card.movements || []).forEach(mv => {
     if (mv.billing === 'monthly') return;
-    const spec = debtSpecFromPurchase(mv);
-    const row = debtMonth(spec, year, month);
+    const row = purchaseMonth(card, mv, year, month);
     if (row) {
-      after += row.balance;
+      after += Math.max(0, row.balance - purchaseDroppedBalance(card, mv));
       installmentsDue += row.cuota + row.extra;
     } else {
-      after += debtOwed(spec, year, month);
+      after += purchaseOwed(card, mv, year, month);
     }
   });
   const pending = Math.max(0, cardMonthTotal(card, year, month) - paidInLoadedMonth('cardId', card.id, year, month));
@@ -1963,7 +2072,8 @@ function saveCards() {
 function updateCardsButton() {
   const btn = document.getElementById('openCardsBtn');
   if (!btn) return;
-  const n = cards.filter(c => c.active !== false).length;
+  const p = loadedPeriod();
+  const n = cards.filter(c => c.active !== false && (!p || !disabledFromIndex(c) || periodIndex(p.year, p.month) < disabledFromIndex(c))).length;
   btn.textContent = n ? `Tarjetas (${n})` : 'Tarjetas';
 }
 
@@ -1992,17 +2102,18 @@ function movementApplies(mv, year, month) {
   const current = periodIndex(year, month);
   const start = periodIndex(mv.startYear, mv.startMonth);
   if (!start || current < start) return false;
-  if (mv.billing === 'monthly') return true;
+  if (mv.billing === 'monthly') return !isPausedAt(cardOfPurchase(mv), year, month);
   return !!debtMonth(debtSpecFromPurchase(mv), year, month);
 }
 
 function cardMonthTotal(card, year, month) {
   if (!card || card.active === false) return 0;
   return (card.movements || []).reduce((sum, mv) => {
+    if (!purchaseActiveAt(card, mv, year, month)) return sum;
     if (mv.billing === 'monthly') {
       return movementApplies(mv, year, month) ? sum + (Number(mv.amount) || 0) : sum;
     }
-    const due = debtMonth(debtSpecFromPurchase(mv), year, month);
+    const due = purchaseMonth(card, mv, year, month);
     return due ? sum + due.cuota + due.extra : sum;
   }, 0);
 }
@@ -2120,6 +2231,138 @@ function submitCard() {
 }
 
 let abonoDraft = null;
+
+let pauseDraft = null;
+
+function pauseOwner(kind, ownerId) {
+  return kind === 'credit' ? credits.find(c => c.id === ownerId) : cards.find(c => c.id === ownerId);
+}
+
+function pauseStatusPill(item, period, activeText) {
+  if (period && isPausedAt(item, period.year, period.month)) return '<span class="tag-pill tag-muted">En pausa</span>';
+  const index = period ? periodIndex(period.year, period.month) : 0;
+  const next = pauseRanges(item.pauses).filter(r => r.from > index).sort((a, b) => a.from - b.from)[0];
+  if (next) {
+    const p = periodFromIndex(next.from);
+    return `<span class="tag-pill tag-ok">${activeText}</span> <span class="tag-pill tag-muted">Pausa desde ${escapeHtml(periodLabel(p.year, p.month))}</span>`;
+  }
+  return `<span class="tag-pill tag-ok">${activeText}</span>`;
+}
+
+function pauseButtonHtml(item, kind) {
+  const attrs = `data-pause-kind="${kind}" data-owner-id="${escapeHtml(item.id)}"`;
+  return openPauseOf(item)
+    ? `<button type="button" class="btn-secondary" data-pause-action="resume" ${attrs}>Reanudar</button>`
+    : `<button type="button" class="btn-secondary" data-pause-action="pause" ${attrs}>Pausar</button>`;
+}
+
+function pausesHtml(item, kind) {
+  const list = (item.pauses || []).slice().sort((a, b) =>
+    periodIndex(a.fromYear, a.fromMonth) - periodIndex(b.fromYear, b.fromMonth)
+  );
+  if (!list.length) return '';
+  const rows = list.map(p => {
+    const until = p.toYear ? `reanuda en ${periodLabel(p.toYear, p.toMonth)}` : 'sin fecha para reanudar';
+    return `<div class="abono-row">
+      <div>
+        <div class="amount">Desde ${escapeHtml(periodLabel(p.fromYear, p.fromMonth))}</div>
+        <div class="detail">${escapeHtml(until)}</div>
+      </div>
+      <button type="button" class="btn-secondary" data-pause-action="delete" data-pause-kind="${kind}" data-owner-id="${escapeHtml(item.id)}" data-pause-id="${escapeHtml(p.id)}">Quitar</button>
+    </div>`;
+  }).join('');
+  return `<div class="abono-block">
+    <div class="abono-head"><strong>Pausas</strong><span>${list.length === 1 ? '1 pausa' : `${list.length} pausas`}</span></div>
+    ${rows}
+  </div>`;
+}
+
+function openPauseModal(kind, ownerId, mode) {
+  const item = pauseOwner(kind, ownerId);
+  if (!item) return;
+  const open = openPauseOf(item);
+  if (mode === 'resume' && !open) return;
+  pauseDraft = { kind, ownerId, mode };
+  const period = selectedPeriodDefaults();
+  const what = kind === 'credit' ? 'el crédito' : 'la tarjeta';
+  const suggested = mode === 'resume'
+    ? (periodIndex(period.year, period.month) > periodIndex(open.fromYear, open.fromMonth) ? period : nextPeriod(open.fromYear, open.fromMonth))
+    : period;
+  document.getElementById('pauseTitle').textContent = mode === 'resume' ? `Reanudar ${item.name}` : `Pausar ${item.name}`;
+  document.getElementById('pauseMonthLabel').textContent = mode === 'resume' ? 'Vuelve a cobrar desde' : 'Pausar desde el mes';
+  document.getElementById('pauseSubmit').textContent = mode === 'resume' ? 'Reanudar' : 'Pausar';
+  document.getElementById('pauseHint').textContent = mode === 'resume'
+    ? `Está en pausa desde ${periodLabel(open.fromYear, open.fromMonth)}. Desde el mes que elijas ${what} vuelve a cobrar y las cuotas pendientes siguen donde quedaron.`
+    : `Los meses anteriores no cambian. Desde el mes que elijas ${what} no cobra cuotas y las pendientes se corren para después de reanudar. Las compras mensuales tampoco se cobran durante la pausa.`;
+  document.getElementById('pauseMonth').innerHTML = monthOptions(suggested.month);
+  document.getElementById('pauseYear').value = suggested.year;
+  document.getElementById('modalPauseWrap').removeAttribute('hidden');
+}
+
+function closePauseModal() {
+  document.getElementById('modalPauseWrap').setAttribute('hidden', '');
+  pauseDraft = null;
+}
+
+function submitPauseModal() {
+  if (!pauseDraft) return;
+  const { kind, ownerId, mode } = pauseDraft;
+  const item = pauseOwner(kind, ownerId);
+  if (!item) return;
+  const month = Number(document.getElementById('pauseMonth').value);
+  const year = Number(document.getElementById('pauseYear').value);
+  if (!year || !month) return;
+  const index = periodIndex(year, month);
+  if (!Array.isArray(item.pauses)) item.pauses = [];
+  if (mode === 'resume') {
+    const open = openPauseOf(item);
+    if (!open) return;
+    if (index <= periodIndex(open.fromYear, open.fromMonth)) {
+      alert(`Elige un mes después de ${periodLabel(open.fromYear, open.fromMonth)}, que es cuando empezó la pausa.`);
+      return;
+    }
+    const clash = pauseRanges(item.pauses.filter(p => p !== open))
+      .find(r => r.from > periodIndex(open.fromYear, open.fromMonth) && r.from < index);
+    if (clash) {
+      const p = periodFromIndex(clash.from);
+      alert(`Ya hay otra pausa desde ${periodLabel(p.year, p.month)}. Reanuda antes de ese mes o quita esa pausa.`);
+      return;
+    }
+    open.toYear = year;
+    open.toMonth = month;
+  } else {
+    if (openPauseOf(item)) return;
+    const inside = pauseRanges(item.pauses).find(r => index >= r.from && index < r.to);
+    if (inside) {
+      alert(`${periodLabel(year, month)} ya está dentro de una pausa.`);
+      return;
+    }
+    const later = pauseRanges(item.pauses).filter(r => r.from > index).sort((a, b) => a.from - b.from)[0];
+    if (later) {
+      const p = periodFromIndex(later.from);
+      alert(`Ya hay una pausa desde ${periodLabel(p.year, p.month)}. Elige un mes después de que termine, o quita esa pausa primero.`);
+      return;
+    }
+    item.pauses.push({ id: newRecordId(), fromYear: year, fromMonth: month, createdAt: Date.now() });
+  }
+  closePauseModal();
+  afterDebtChange(kind === 'credit' ? 'credit' : 'purchase', ownerId);
+}
+
+function handlePauseClick(btn) {
+  const kind = btn.getAttribute('data-pause-kind');
+  const ownerId = btn.getAttribute('data-owner-id');
+  const action = btn.getAttribute('data-pause-action');
+  if (action === 'pause' || action === 'resume') {
+    openPauseModal(kind, ownerId, action);
+    return;
+  }
+  if (action !== 'delete') return;
+  const item = pauseOwner(kind, ownerId);
+  if (!item) return;
+  item.pauses = (item.pauses || []).filter(p => p.id !== btn.getAttribute('data-pause-id'));
+  afterDebtChange(kind === 'credit' ? 'credit' : 'purchase', ownerId);
+}
 
 function abonoHistoryHtml(abonos, attrs, simple) {
   const list = abonos || [];
@@ -2300,14 +2543,16 @@ function liquidateCredit(id) {
   afterDebtChange('credit', id);
 }
 
-function purchaseLiquidation(mv, period) {
-  if (!mv || mv.billing === 'monthly') return null;
+function purchaseLiquidation(card, mv, period) {
+  if (!mv || mv.billing === 'monthly' || !purchaseActiveAt(card, mv, period.year, period.month)) return null;
   const opt = liquidationOptions(debtSpecFromPurchase(mv), period.year, period.month);
-  return opt && opt.amount > 0 ? opt : null;
+  if (!opt) return null;
+  const amount = opt.amount - purchaseDroppedBalance(card, mv);
+  return amount > 0 ? { row: opt.row, amount } : null;
 }
 
 function liquidatePurchases(card, list, period) {
-  const plans = list.map(mv => ({ mv, opt: purchaseLiquidation(mv, period) })).filter(p => p.opt);
+  const plans = list.map(mv => ({ mv, opt: purchaseLiquidation(card, mv, period) })).filter(p => p.opt);
   if (!plans.length) {
     alert('No hay saldo pendiente para liquidar en este mes.');
     return;
@@ -2326,6 +2571,27 @@ function liquidatePurchases(card, list, period) {
     if (!mv.abonos) mv.abonos = [];
     mv.abonos.push({ id: newRecordId(), amount: opt.amount, year: period.year, month: period.month, mode: 'abono', liquidation: true, createdAt: Date.now() });
   });
+  afterDebtChange('purchase', card.id);
+}
+
+function setCardDisabled(card, mv, disable) {
+  const target = mv || card;
+  if (!card || !target) return;
+  const name = mv ? `${mv.concept} (${card.name})` : card.name;
+  if (disable) {
+    const period = selectedPeriodDefaults();
+    const from = nextPeriod(period.year, period.month);
+    const what = mv
+      ? (mv.billing === 'monthly' ? 'deja de sumar su cobro mensual' : 'deja de sumar sus cuotas y su saldo')
+      : 'deja de cobrar todas sus compras';
+    const msg = `Inhabilitar ${name} desde ${periodLabel(from.year, from.month)}\n\n${periodLabel(period.year, period.month)} se cobra normal. Desde ${periodLabel(from.year, from.month)} ${what}.\n\nPuedes volver a habilitarla cuando quieras.`;
+    if (!confirm(msg)) return;
+    target.disabledFromYear = from.year;
+    target.disabledFromMonth = from.month;
+  } else {
+    delete target.disabledFromYear;
+    delete target.disabledFromMonth;
+  }
   afterDebtChange('purchase', card.id);
 }
 
@@ -2355,34 +2621,54 @@ function renderCardsModal() {
   }
   list.innerHTML = cards.map(card => {
     const total = cardMonthTotal(card, period.year, period.month);
+    const cardCutIndex = disabledFromIndex(card);
+    const cardCutLabel = cardCutIndex ? periodLabel(periodFromIndex(cardCutIndex).year, periodFromIndex(cardCutIndex).month) : '';
     const activeLabel = card.active === false
       ? '<span class="tag-pill tag-muted">Inactiva</span>'
-      : '<span class="tag-pill tag-ok">Activa</span>';
+      : (cardCutIndex
+        ? `<span class="tag-pill tag-muted">Inhabilitada desde ${escapeHtml(cardCutLabel)}</span>`
+        : pauseStatusPill(card, period, 'Activa'));
+    const cardPaused = isPausedAt(card, period.year, period.month);
     const omitted = period && dismissedCardIds.includes(card.id) && total > 0;
+    const cardCut = cardCutIndex;
     const moves = (card.movements || []).map(mv => {
       const applies = movementApplies(mv, period.year, period.month);
       const monthly = mv.billing === 'monthly';
-      const due = monthly ? null : debtMonth(debtSpecFromPurchase(mv), period.year, period.month);
+      const ownCut = disabledFromIndex(mv);
+      const cut = purchaseCutoff(card, mv);
+      const activeNow = purchaseActiveAt(card, mv, period.year, period.month);
+      const due = monthly ? null : purchaseMonth(card, mv, period.year, period.month);
       const span = movementSpan(mv);
-      const cuotaLabel = monthly
-        ? (applies ? 'Cada mes' : 'Aún no inicia')
-        : (due ? `Cuota ${due.current} de ${due.total} · quedan ${due.total - due.current + 1}` : (periodIndex(period.year, period.month) < span.start ? 'Aún no inicia' : 'Ya terminó'));
+      const cutLabel = cut ? `Inhabilitada desde ${periodLabel(periodFromIndex(cut).year, periodFromIndex(cut).month)}` : '';
+      const cuotaLabel = !activeNow
+        ? cutLabel
+        : cardPaused && periodIndex(period.year, period.month) >= span.start
+        ? 'En pausa este mes'
+        : monthly
+          ? (applies ? 'Cada mes' : 'Aún no inicia')
+          : (due ? `Cuota ${due.current} de ${due.total} · quedan ${due.total - due.current + 1}` : (periodIndex(period.year, period.month) < span.start ? 'Aún no inicia' : 'Ya terminó'));
       const shownAmount = due ? due.cuota : (Number(mv.amount) || 0);
       const detail = monthly
         ? `Desde ${periodLabel(mv.startYear, mv.startMonth)}`
         : `Desde ${periodLabel(mv.startYear, mv.startMonth)} · ${due ? due.total : span.total} cuotas`;
-      const owed = monthly ? null : debtOwed(debtSpecFromPurchase(mv), period.year, period.month);
+      const owed = monthly ? null : purchaseOwed(card, mv, period.year, period.month);
       const extraNote = due && due.extra ? ` · Abono ${formatCOP(due.extra)}` : '';
+      const cutNote = cut && activeNow ? ` · Último cobro ${periodLabel(periodFromIndex(cut - 1).year, periodFromIndex(cut - 1).month)}` : '';
       const abonoAttrs = `data-abono-kind="purchase" data-owner-id="${escapeHtml(card.id)}" data-movement-id="${escapeHtml(mv.id)}"`;
-      return `<div class="card-move">
+      const moveAttrs = `data-card-id="${escapeHtml(card.id)}" data-movement-id="${escapeHtml(mv.id)}"`;
+      const toggleBtn = cardCut && (!ownCut || cardCut <= ownCut)
+        ? ''
+        : `<button type="button" class="btn-secondary" data-card-action="${ownCut ? 'enable-movement' : 'disable-movement'}" ${moveAttrs}>${ownCut ? 'Habilitar' : 'Inhabilitar'}</button>`;
+      return `<div class="card-move${cut ? ' is-disabled' : ''}">
         <div style="flex:1 1 100%;">
-          <strong>${escapeHtml(mv.concept)}</strong>
-          <div class="meta">${formatCOP(shownAmount)} · ${escapeHtml(cuotaLabel)} · ${escapeHtml(detail)}${extraNote}${monthly ? '' : ` · Se debe ${formatCOP(owed)}`}</div>
+          <strong>${escapeHtml(mv.concept)}</strong>${cut ? ' <span class="tag-pill tag-muted">inhabilitada</span>' : ''}
+          <div class="meta">${formatCOP(shownAmount)} · ${escapeHtml(cuotaLabel)} · ${escapeHtml(detail)}${extraNote}${escapeHtml(cutNote)}${monthly ? '' : ` · Se debe ${formatCOP(owed)}`}</div>
           <div class="actions" style="margin-top:0.35rem;">
-            <button type="button" class="btn-secondary" data-card-action="edit-movement" data-card-id="${escapeHtml(card.id)}" data-movement-id="${escapeHtml(mv.id)}">Editar</button>
-            ${monthly ? '' : `<button type="button" class="btn-secondary" data-abono-action="open" ${abonoAttrs}>Abonar</button>`}
-            ${!monthly && loadedPeriod() && purchaseLiquidation(mv, period) ? `<button type="button" class="btn-secondary" data-card-action="liquidate-movement" data-card-id="${escapeHtml(card.id)}" data-movement-id="${escapeHtml(mv.id)}">Liquidar</button>` : ''}
-            <button type="button" class="btn-danger" data-card-action="delete-movement" data-card-id="${escapeHtml(card.id)}" data-movement-id="${escapeHtml(mv.id)}">Quitar</button>
+            <button type="button" class="btn-secondary" data-card-action="edit-movement" ${moveAttrs}>Editar</button>
+            ${monthly || cut ? '' : `<button type="button" class="btn-secondary" data-abono-action="open" ${abonoAttrs}>Abonar</button>`}
+            ${!monthly && loadedPeriod() && purchaseLiquidation(card, mv, period) ? `<button type="button" class="btn-secondary" data-card-action="liquidate-movement" ${moveAttrs}>Liquidar</button>` : ''}
+            ${toggleBtn}
+            <button type="button" class="btn-danger" data-card-action="delete-movement" ${moveAttrs}>Quitar</button>
           </div>
           ${monthly ? '' : abonoHistoryHtml(mv.abonos, abonoAttrs, true)}
         </div>
@@ -2398,11 +2684,14 @@ function renderCardsModal() {
         <div data-card-moves ${expandedCardMoves.has(card.id) ? '' : 'hidden'}>
           ${moves || '<div class="meta">Sin compras. La cuota de este mes es $0.</div>'}
         </div>
+        ${pausesHtml(card, 'card')}
         <div class="actions" style="margin-top:0.55rem;">
           <button type="button" data-card-action="add-movement" data-card-id="${escapeHtml(card.id)}">Agregar compra</button>
-          ${loadedPeriod() && (card.movements || []).some(mv => purchaseLiquidation(mv, period)) ? `<button type="button" class="btn-secondary" data-card-action="liquidate" data-card-id="${escapeHtml(card.id)}">Liquidar tarjeta</button>` : ''}
+          ${loadedPeriod() && (card.movements || []).some(mv => purchaseLiquidation(card, mv, period)) ? `<button type="button" class="btn-secondary" data-card-action="liquidate" data-card-id="${escapeHtml(card.id)}">Liquidar tarjeta</button>` : ''}
           ${omitted ? `<button type="button" data-card-action="include" data-card-id="${escapeHtml(card.id)}">Incluir en este mes</button>` : ''}
-          <button type="button" class="btn-secondary" data-card-action="toggle" data-card-id="${escapeHtml(card.id)}">${card.active === false ? 'Activar' : 'Pausar'}</button>
+          ${card.active === false
+            ? `<button type="button" class="btn-secondary" data-card-action="toggle" data-card-id="${escapeHtml(card.id)}">Activar</button>`
+            : `${cardCutIndex ? '' : pauseButtonHtml(card, 'card')}<button type="button" class="btn-secondary" data-card-action="${cardCutIndex ? 'enable' : 'disable'}" data-card-id="${escapeHtml(card.id)}">${cardCutIndex ? 'Habilitar' : 'Inhabilitar'}</button>`}
           <button type="button" class="btn-danger" data-card-action="delete-card" data-card-id="${escapeHtml(card.id)}">Eliminar tarjeta</button>
         </div>
       </div>
@@ -2569,7 +2858,7 @@ function creditProgress(credit) {
   const due = debtMonth(debtSpecFromCredit(credit), period.year, period.month);
   const proj = projectDebt(debtSpecFromCredit(credit));
   const originalCuota = Number(credit.amount) || 0;
-  const installments = proj.schedule.length || Number(credit.installments) || 0;
+  const installments = (proj.schedule.length + proj.pendingInstallments) || Number(credit.installments) || 0;
   const remainingAmount = creditOwedNow(credit, period.year, period.month);
   let current = 0;
   let remainingCount = installments;
@@ -2581,12 +2870,14 @@ function creditProgress(credit) {
       ? expenses.find(e => e.creditId === credit.id && !e.abonoLine)
       : null;
     if (countsAsDone(main)) remainingCount -= 1;
-  } else if (proj.schedule.length && periodIndex(period.year, period.month) > proj.schedule[proj.schedule.length - 1].index) {
-    current = proj.schedule.length;
-    remainingCount = 0;
+  } else if (proj.schedule.length && periodIndex(period.year, period.month) > proj.schedule[0].index) {
+    const index = periodIndex(period.year, period.month);
+    current = proj.schedule.filter(row => row.index < index).length;
+    remainingCount = installments - current;
   }
   return {
     ...stats,
+    paused: isPausedAt(credit, period.year, period.month),
     installments,
     cuota: due ? due.cuota : originalCuota,
     originalCuota,
@@ -2607,10 +2898,12 @@ function renderCreditsModal() {
     const omitted = period && creditAppliesToPeriod(c, period.year, period.month) && dismissedCreditIds.includes(c.id);
     const activeLabel = c.active === false
       ? '<span class="tag-pill tag-muted">Inactivo</span>'
-      : '<span class="tag-pill tag-ok">Activo</span>';
+      : pauseStatusPill(c, period, 'Activo');
     const since = `${MONTH_NAMES[Number(c.startMonth)] || '—'} ${c.startYear || ''}`.trim();
     const progress = creditProgress(c);
-    const cuotaLabel = progress.current < 1
+    const cuotaLabel = progress.paused
+      ? `En pausa este mes · lleva ${progress.current} de ${progress.installments} cuotas`
+      : progress.current < 1
       ? 'Aún no inicia'
       : (progress.installments
         ? `Vas en la cuota ${progress.current} de ${progress.installments}`
@@ -2629,7 +2922,9 @@ function renderCreditsModal() {
       `<button type="button" class="btn-secondary" data-credit-action="edit" data-credit-id="${escapeHtml(c.id)}">Editar</button>`,
       `<button type="button" class="btn-secondary" data-abono-action="open" data-abono-kind="credit" data-owner-id="${escapeHtml(c.id)}">Abonar</button>`,
       canLiquidate ? `<button type="button" class="btn-secondary" data-credit-action="liquidate" data-credit-id="${escapeHtml(c.id)}">Liquidar</button>` : '',
-      `<button type="button" class="btn-secondary" data-credit-action="toggle" data-credit-id="${escapeHtml(c.id)}">${c.active === false ? 'Activar' : 'Pausar'}</button>`,
+      c.active === false
+        ? `<button type="button" class="btn-secondary" data-credit-action="toggle" data-credit-id="${escapeHtml(c.id)}">Activar</button>`
+        : pauseButtonHtml(c, 'credit'),
       omitted ? `<button type="button" data-credit-action="include" data-credit-id="${escapeHtml(c.id)}">Incluir en este mes</button>` : '',
       `<button type="button" class="btn-danger" data-credit-action="delete" data-credit-id="${escapeHtml(c.id)}">Eliminar</button>`
     ].join('');
@@ -2637,11 +2932,12 @@ function renderCreditsModal() {
       <div>
         <strong>${escapeHtml(c.name)}</strong> ${activeLabel}
         <div class="owed">Se debe ${formatCOP(progress.remainingAmount)}</div>
-        <div class="meta">Cuota de este mes ${formatCOP(progress.cuota)}${progress.originalCuota !== progress.cuota ? ` (pactada ${formatCOP(progress.originalCuota)})` : ''}${progress.extra ? ` · Abono ${formatCOP(progress.extra)}` : ''} · Desde ${escapeHtml(since)}</div>
+        <div class="meta">Cuota de este mes ${formatCOP(progress.paused ? 0 : progress.cuota)}${progress.originalCuota !== progress.cuota ? ` (pactada ${formatCOP(progress.originalCuota)})` : ''}${progress.extra ? ` · Abono ${formatCOP(progress.extra)}` : ''} · Desde ${escapeHtml(since)}</div>
         <div class="meta">${escapeHtml(cuotaLabel)} · ${escapeHtml(paidLabel)}</div>
         <div class="meta">${escapeHtml(leftLabel)}</div>
         ${omitted ? '<div class="meta">Omitida en el mes cargado</div>' : ''}
         ${abonoHistoryHtml(c.abonos, `data-abono-kind="credit" data-owner-id="${escapeHtml(c.id)}"`)}
+        ${pausesHtml(c, 'credit')}
       </div>
       <div class="actions">${actions}</div>
     </div>`;
@@ -3069,6 +3365,11 @@ document.getElementById("creditsList").addEventListener("click", ev => {
     renderCreditsModal();
     return;
   }
+  const pauseBtn = ev.target.closest("[data-pause-action]");
+  if (pauseBtn) {
+    handlePauseClick(pauseBtn);
+    return;
+  }
   const btn = ev.target.closest("[data-credit-action]");
   if (!btn) return;
   const id = btn.getAttribute("data-credit-id");
@@ -3084,6 +3385,11 @@ document.getElementById("cardsList").addEventListener("click", ev => {
   const abonoBtn = ev.target.closest("[data-abono-action]");
   if (abonoBtn) {
     handleAbonoClick(abonoBtn);
+    return;
+  }
+  const pauseBtn = ev.target.closest("[data-pause-action]");
+  if (pauseBtn) {
+    handlePauseClick(pauseBtn);
     return;
   }
   const btn = ev.target.closest("[data-card-action]");
@@ -3118,6 +3424,12 @@ document.getElementById("cardsList").addEventListener("click", ev => {
       render();
     }
     renderCardsModal();
+  } else if (action === "disable" || action === "enable") {
+    setCardDisabled(cards.find(c => c.id === cardId), null, action === "disable");
+  } else if (action === "disable-movement" || action === "enable-movement") {
+    const card = cards.find(c => c.id === cardId);
+    const mv = card && (card.movements || []).find(item => item.id === movementId);
+    setCardDisabled(card, mv, action === "disable-movement");
   } else if (action === "include") {
     dismissedCardIds = dismissedCardIds.filter(id => id !== cardId);
     saveData();
@@ -3167,6 +3479,7 @@ document.addEventListener("keydown", e => {
   if (!del.hasAttribute("hidden")) closeDeleteModal();
   else if (!move.hasAttribute("hidden")) closeMovementModal();
   else if (abono && !abono.hasAttribute("hidden")) closeAbonoModal();
+  else if (!document.getElementById("modalPauseWrap").hasAttribute("hidden")) closePauseModal();
   else if (purchase && !purchase.hasAttribute("hidden")) closePurchaseModal();
   else if (creditsModal && !creditsModal.hasAttribute("hidden")) closeCreditsModal();
   else if (document.getElementById("modalCardsWrap") && !document.getElementById("modalCardsWrap").hasAttribute("hidden")) closeCardsModal();
@@ -3221,7 +3534,7 @@ function collectFinanzasFromStorage(){
   return entries;
 }
 
-const PREFERENCE_KEYS = ["finanzasTheme", "finanzasMoveDetail"];
+const PREFERENCE_KEYS = ["finanzasTheme", "finanzasMoveDetail", "finanzasMoveSort"];
 
 function summarizeEntries(entries){
   const keys = Object.keys(entries);
@@ -3322,6 +3635,7 @@ function applyImportedPreferences(){
   if (toggle) toggle.checked = dark;
   showMoveDetail = localStorage.getItem("finanzasMoveDetail") !== "zen";
   applyMoveDetailMode();
+  applyMoveSortPreference();
 }
 
 function setAllDone(done) {
@@ -3498,7 +3812,8 @@ function render(){
   const table = document.getElementById('expenseList');
   table.innerHTML='';
 
-  expenses.forEach((e,i)=>{
+  sortedMoveIndexes().forEach(i=>{
+    const e = expenses[i];
     if (!matchesSearchQuery(e, searchQ)) return;
 
     const enabled = isMoveEnabled(e);
@@ -3600,6 +3915,37 @@ function renderDashboard(fixed, variable, savings, doneFixed, doneVariable, done
 }
 
 document.getElementById("filterDone").addEventListener("change", () => render());
+
+const MOVE_SORT_KEY = "finanzasMoveSort";
+
+function applyMoveSortPreference() {
+  const select = document.getElementById("sortMoves");
+  const saved = localStorage.getItem(MOVE_SORT_KEY);
+  if (select && saved && [...select.options].some(o => o.value === saved)) select.value = saved;
+  else if (select) select.value = "newest";
+}
+
+function sortedMoveIndexes() {
+  const mode = (document.getElementById("sortMoves") || {}).value || "newest";
+  const indexes = expenses.map((_, i) => i);
+  const created = i => Number(expenses[i].createdAt) || 0;
+  const amount = i => Number(expenses[i].amount) || 0;
+  const byIndex = (a, b) => b - a;
+  const compare = {
+    newest: (a, b) => created(b) - created(a) || byIndex(a, b),
+    oldest: (a, b) => created(a) - created(b) || a - b,
+    "amount-desc": (a, b) => amount(b) - amount(a) || byIndex(a, b),
+    "amount-asc": (a, b) => amount(a) - amount(b) || byIndex(a, b),
+    name: (a, b) => String(expenses[a].name || "").localeCompare(String(expenses[b].name || ""), "es") || byIndex(a, b)
+  }[mode] || ((a, b) => created(b) - created(a) || byIndex(a, b));
+  return indexes.sort(compare);
+}
+
+applyMoveSortPreference();
+document.getElementById("sortMoves").addEventListener("change", ev => {
+  localStorage.setItem(MOVE_SORT_KEY, ev.target.value);
+  render();
+});
 
 let showMoveDetail = localStorage.getItem("finanzasMoveDetail") !== "zen";
 
