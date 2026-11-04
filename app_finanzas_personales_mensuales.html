@@ -369,6 +369,34 @@
       margin: 0.1rem 0.2rem 0.1rem 0;
     }
 
+    .tag-suggest {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.5rem;
+      max-height: 7.5rem;
+      overflow-y: auto;
+    }
+    .tag-suggest:empty { display: none; }
+    .tag-suggest button.tag-chip {
+      width: auto;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      box-shadow: none;
+      cursor: pointer;
+    }
+    .tag-suggest button.tag-chip:hover { border-color: var(--accent); color: var(--accent-ink); }
+    .tag-suggest button.tag-chip.is-on {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent-ink);
+    }
+
     .tag-summary-table {
       width: 100%;
       border-collapse: collapse;
@@ -1370,7 +1398,8 @@
         </div>
         <div style="flex: 1 1 100%;">
           <label for="mTags">Etiquetas</label>
-          <input id="mTags" type="text" placeholder="coma: casa, trabajo" autocomplete="off" />
+          <input id="mTags" type="text" placeholder="coma: casa, trabajo" autocomplete="off" oninput="renderTagSuggestions()" />
+          <div id="mTagSuggest" class="tag-suggest" aria-label="Etiquetas sugeridas"></div>
         </div>
       </div>
     </div>
@@ -1646,6 +1675,79 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
+function normalizeTagKey(t) {
+  return String(t).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/* Reúne las etiquetas usadas en todos los meses guardados (y el mes actual en memoria), ordenadas por frecuencia. */
+function collectKnownTags() {
+  const counts = new Map();
+  const add = list => (Array.isArray(list) ? list : []).forEach(e => {
+    getTagsArray(e).forEach(t => {
+      const key = normalizeTagKey(t);
+      if (!key) return;
+      const cur = counts.get(key);
+      if (cur) cur.count++;
+      else counts.set(key, { label: t, count: 1 });
+    });
+  });
+  for (let i = 0; i < finanzasStorage.length; i++) {
+    const key = finanzasStorage.key(i) || '';
+    if (!/^finanzas-\d+-\d+$/.test(key) || key === currentKey) continue;
+    try { add((JSON.parse(finanzasStorage.getItem(key) || '{}') || {}).expenses); } catch (_) {}
+  }
+  add(expenses);
+  return Array.from(counts.values())
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'es'));
+}
+
+let knownTagsCache = [];
+
+function splitTagInput(value) {
+  const parts = String(value).split(/[,;]/);
+  const fragment = parts.pop();
+  const done = parts.map(t => t.trim()).filter(Boolean);
+  return { done, fragment: fragment.trim() };
+}
+
+function renderTagSuggestions() {
+  const input = document.getElementById('mTags');
+  const box = document.getElementById('mTagSuggest');
+  const { done, fragment } = splitTagInput(input.value);
+  const selected = new Set(done.map(normalizeTagKey));
+  if (fragment) selected.add(normalizeTagKey(fragment));
+  const q = normalizeTagKey(fragment);
+  const list = knownTagsCache
+    .filter(t => !q || normalizeTagKey(t.label).includes(q))
+    .slice(0, 30);
+  box.innerHTML = list.map(t => {
+    const on = selected.has(normalizeTagKey(t.label));
+    return `<button type="button" class="tag-chip${on ? ' is-on' : ''}" aria-pressed="${on}" data-tag="${escapeHtml(t.label)}">${on ? '✓ ' : ''}${escapeHtml(t.label)}</button>`;
+  }).join('');
+}
+
+function toggleSuggestedTag(label) {
+  const input = document.getElementById('mTags');
+  const { done, fragment } = splitTagInput(input.value);
+  const key = normalizeTagKey(label);
+  let tags = fragment ? done.concat(fragment) : done.slice();
+  const exists = tags.some(t => normalizeTagKey(t) === key);
+  if (exists) {
+    tags = tags.filter(t => normalizeTagKey(t) !== key);
+  } else {
+    // Si estaba escribiendo un fragmento que coincide parcialmente, se reemplaza por la etiqueta elegida.
+    if (fragment && normalizeTagKey(label).includes(normalizeTagKey(fragment))) tags = done.slice();
+    tags.push(label);
+  }
+  input.value = tags.length ? tags.join(', ') + ', ' : '';
+  renderTagSuggestions();
+}
+
+document.addEventListener('click', ev => {
+  const chip = ev.target.closest && ev.target.closest('#mTagSuggest .tag-chip');
+  if (chip) toggleSuggestedTag(chip.dataset.tag);
+});
+
 let movementModalEditIndex = null;
 let pendingDeleteIndex = null;
 let pendingCreditDeleteId = null;
@@ -1686,6 +1788,8 @@ function openMovementModal(mode, index) {
     title.textContent = 'Agregar movimiento';
     clearMovementModalForm();
   }
+  knownTagsCache = collectKnownTags();
+  renderTagSuggestions();
   document.getElementById('modalMovementWrap').removeAttribute('hidden');
   document.getElementById('mName').focus();
 }
