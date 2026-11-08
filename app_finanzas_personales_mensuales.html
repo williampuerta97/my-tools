@@ -1396,6 +1396,10 @@
             <option value="saving">Desde ahorro acumulado</option>
           </select>
         </div>
+        <div>
+          <label for="mCreatedAt">Fecha de creación</label>
+          <input id="mCreatedAt" type="date" />
+        </div>
         <div style="flex: 1 1 100%;">
           <label for="mTags">Etiquetas</label>
           <input id="mTags" type="text" placeholder="coma: casa, trabajo" autocomplete="off" oninput="renderTagSuggestions()" />
@@ -1451,6 +1455,33 @@ function getMonthStartTimestamp() {
   const y = Number(document.getElementById('year').value);
   const m = Number(document.getElementById('month').value) - 1;
   return new Date(y, m, 1).getTime();
+}
+
+// Fecha de creación por defecto: ahora si el mes cargado es el actual;
+// si no, el mismo día/hora de hoy pero dentro del mes cargado (ajustado al último día).
+function defaultCreatedAtForPeriod() {
+  const now = new Date();
+  const period = loadedPeriod();
+  if (!period) return now.getTime();
+  const { year, month } = period;
+  if (year === now.getFullYear() && month === now.getMonth() + 1) return now.getTime();
+  const lastDay = new Date(year, month, 0).getDate();
+  const day = Math.min(now.getDate(), lastDay);
+  return new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds()).getTime();
+}
+
+function toDateInputValue(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// Convierte 'YYYY-MM-DD' a timestamp conservando la hora de timeRefTs
+function fromDateInputValue(value, timeRefTs) {
+  const [y, m, d] = value.split('-').map(Number);
+  const ref = new Date(timeRefTs || Date.now());
+  return new Date(y, m - 1, d, ref.getHours(), ref.getMinutes(), ref.getSeconds()).getTime();
 }
 
 function timeAgo(ts) {
@@ -1784,9 +1815,11 @@ function openMovementModal(mode, index) {
     document.getElementById('mType').value = e.type;
     document.getElementById('mConcept').value = e.concept != null ? e.concept : 'salary';
     document.getElementById('mTags').value = getTagsArray(e).join(', ');
+    document.getElementById('mCreatedAt').value = toDateInputValue(Number(e.createdAt) || defaultCreatedAtForPeriod());
   } else {
     title.textContent = 'Agregar movimiento';
     clearMovementModalForm();
+    document.getElementById('mCreatedAt').value = toDateInputValue(defaultCreatedAtForPeriod());
   }
   knownTagsCache = collectKnownTags();
   renderTagSuggestions();
@@ -1806,18 +1839,27 @@ function submitMovementModal() {
   const type = document.getElementById('mType').value;
   const concept = document.getElementById('mConcept').value;
   const tags = parseTags(document.getElementById('mTags').value);
+  const dateValue = document.getElementById('mCreatedAt').value;
   const now = Date.now();
   if (!name || !amount) return;
   if (movementModalEditIndex !== null) {
-    Object.assign(expenses[movementModalEditIndex], {
+    const current = expenses[movementModalEditIndex];
+    const prevCreated = Number(current.createdAt) || 0;
+    // Si la fecha no cambió, conserva el timestamp original (con su hora)
+    const createdAt = dateValue && dateValue !== toDateInputValue(prevCreated)
+      ? fromDateInputValue(dateValue, prevCreated || now)
+      : (prevCreated || defaultCreatedAtForPeriod());
+    Object.assign(current, {
       name, amount, movement, type, concept, tags,
+      createdAt,
       updatedAt: now
     });
   } else {
+    const createdAt = dateValue ? fromDateInputValue(dateValue, now) : defaultCreatedAtForPeriod();
     expenses.push({
       name, amount, movement, type, concept, tags,
       done: false,
-      createdAt: now,
+      createdAt,
       updatedAt: now
     });
   }
