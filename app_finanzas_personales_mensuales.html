@@ -694,6 +694,132 @@
       padding: 0.48rem 0.35rem;
       font-size: 0.78rem;
     }
+    .move-actions .btn-shift {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+    }
+    .btn-shift svg { width: 0.95rem; height: 0.95rem; flex-shrink: 0; }
+    .move-side {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.35rem;
+    }
+    .btn-shift-inline {
+      display: none;
+      align-items: center;
+      gap: 0.25rem;
+      width: auto;
+      padding: 0.22rem 0.5rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-ink);
+      box-shadow: none;
+    }
+    .btn-shift-inline:hover { box-shadow: none; }
+    .btn-shift-inline svg { width: 0.85rem; height: 0.85rem; }
+    @media (max-width: 480px) {
+      .move-actions .btn-shift { display: none; }
+      .btn-shift-inline { display: inline-flex; }
+    }
+
+    /* Mover movimiento a otro mes */
+    .shift-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.7rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--soft);
+      margin-bottom: 0.9rem;
+    }
+    .shift-summary strong { display: block; font-size: 0.95rem; }
+    .shift-meta { display: block; margin-top: 0.15rem; font-size: 0.76rem; color: var(--muted); }
+    .shift-chips { display: flex; gap: 0.5rem; margin-bottom: 0.9rem; }
+    .shift-chips button {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.1rem;
+      padding: 0.6rem 0.75rem;
+      text-align: left;
+      background: var(--secondary-bg);
+      color: var(--text);
+      border: 1px solid transparent;
+      box-shadow: none;
+    }
+    .shift-chips button:hover { box-shadow: none; background: var(--secondary-hover); }
+    .shift-chips button small { font-size: 0.68rem; font-weight: 600; color: var(--muted); }
+    .shift-chips button span { font-size: 0.9rem; }
+    .shift-chips button.is-active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent-ink);
+    }
+    .shift-chips button.is-active small { color: var(--accent-ink); }
+    .shift-fields {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      gap: 0.6rem;
+    }
+    .shift-fields input, .shift-fields select { width: 100%; box-sizing: border-box; }
+    .shift-fields .shift-date { grid-column: 1 / -1; }
+    .shift-route {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0.95rem 0 0;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .shift-route .arrow { color: var(--accent); }
+    .shift-note { margin: 0.4rem 0 0; font-size: 0.8rem; line-height: 1.45; color: var(--muted); }
+    .shift-note.is-error { color: var(--expense-ink); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+    .snackbar {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: calc(max(0.75rem, env(safe-area-inset-bottom)) + 4.25rem);
+      width: min(calc(100% - 1.5rem), 30rem);
+      z-index: 900;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 0.6rem 0.6rem 0.95rem;
+      border-radius: 12px;
+      background: var(--text);
+      color: var(--surface);
+      box-shadow: 0 12px 32px rgba(26, 31, 46, 0.25);
+      font-size: 0.85rem;
+      animation: snackbar-in 0.18s ease-out;
+    }
+    .snackbar[hidden] { display: none !important; }
+    .snackbar span { flex: 1 1 auto; min-width: 0; }
+    .snackbar button {
+      width: auto;
+      flex-shrink: 0;
+      padding: 0.4rem 0.65rem;
+      font-size: 0.8rem;
+      background: transparent;
+      color: var(--surface);
+      border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+      box-shadow: none;
+    }
+    .snackbar button:hover { box-shadow: none; background: color-mix(in srgb, currentColor 12%, transparent); }
+    @keyframes snackbar-in {
+      from { opacity: 0; transform: translate(-50%, 0.5rem); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+
     .btn-mark {
       background: var(--pill-ok-bg) !important;
       color: var(--pill-ok-ink) !important;
@@ -1414,6 +1540,55 @@
   </div>
 </div>
 
+<div id="modalShiftWrap" class="modal-wrap" hidden>
+  <div class="modal-scrim" onclick="closeShiftModal()"></div>
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="shiftTitle">
+    <div class="modal-header">
+      <h2 id="shiftTitle">Mover a otro mes</h2>
+      <button type="button" class="modal-close" onclick="closeShiftModal()" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="shift-summary">
+        <div>
+          <strong id="shiftName"></strong>
+          <span id="shiftMeta" class="shift-meta"></span>
+        </div>
+        <div class="move-amount" id="shiftAmount"></div>
+      </div>
+      <div class="shift-chips" role="group" aria-label="Destino rápido">
+        <button type="button" id="shiftPrevBtn" data-shift-step="-1"><small>Mes anterior</small><span id="shiftPrevLabel"></span></button>
+        <button type="button" id="shiftNextBtn" data-shift-step="1"><small>Mes siguiente</small><span id="shiftNextLabel"></span></button>
+      </div>
+      <div class="shift-fields">
+        <div>
+          <label for="shiftMonth">Mes destino</label>
+          <select id="shiftMonth"></select>
+        </div>
+        <div>
+          <label for="shiftYear">Año</label>
+          <input id="shiftYear" type="number" inputmode="numeric" />
+        </div>
+        <div class="shift-date">
+          <label for="shiftDate">Nueva fecha</label>
+          <input id="shiftDate" type="date" />
+        </div>
+      </div>
+      <p class="shift-route"><span id="shiftFrom"></span><span class="arrow" aria-hidden="true">→</span><span id="shiftTo"></span></p>
+      <p id="shiftNote" class="shift-note"></p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" onclick="closeShiftModal()">Cancelar</button>
+      <button type="button" id="shiftSubmit" onclick="submitShiftModal()">Mover</button>
+    </div>
+  </div>
+</div>
+
+<div id="shiftToast" class="snackbar" role="status" aria-live="polite" hidden>
+  <span id="shiftToastText"></span>
+  <button type="button" id="shiftToastGo">Ver mes</button>
+  <button type="button" id="shiftToastUndo">Deshacer</button>
+</div>
+
 <div id="modalDeleteWrap" class="modal-wrap" hidden>
   <div class="modal-scrim" onclick="closeDeleteModal()"></div>
   <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalDeleteTitle">
@@ -1966,6 +2141,218 @@ function confirmDeleteExpense() {
   }
   closeDeleteModal();
 }
+
+// ---- Mover movimiento a otro mes ----
+let shiftIndex = null;
+let shiftDateTouched = false;
+let lastShift = null;
+let shiftToastTimer = null;
+
+// Las cuotas, abonos y el sobrante se generan solos en cada mes: no se mueven a mano
+function canShiftMovement(e) {
+  return !!e && !e.carryFrom && !e.abonoLine && !e.creditId && !e.cardId;
+}
+
+function monthKey(year, month) {
+  return `finanzas-${year}-${month}`;
+}
+
+function shiftTargetPeriod() {
+  const year = Number(document.getElementById('shiftYear').value);
+  const month = Number(document.getElementById('shiftMonth').value);
+  if (!Number.isInteger(year) || year < 1900 || year > 9999 || !(month >= 1 && month <= 12)) return null;
+  return { year, month };
+}
+
+// Hacia adelante cae el día 1 del mes destino; hacia atrás, el último día. Conserva la hora original.
+function defaultShiftCreatedAt(source, target, refTs) {
+  const ref = new Date(refTs || Date.now());
+  const forward = periodIndex(target.year, target.month) > periodIndex(source.year, source.month);
+  const day = forward ? 1 : new Date(target.year, target.month, 0).getDate();
+  return new Date(target.year, target.month - 1, day, ref.getHours(), ref.getMinutes(), ref.getSeconds()).getTime();
+}
+
+function openShiftModal(i) {
+  const e = expenses[i];
+  const period = loadedPeriod();
+  if (!canShiftMovement(e) || !period) return;
+  shiftIndex = i;
+  const movement = e.movement || 'expense';
+  document.getElementById('shiftName').textContent = e.name;
+  document.getElementById('shiftAmount').textContent = formatCOP(e.amount);
+  document.getElementById('shiftMeta').textContent =
+    `${translations[movement]} · ${e.done ? 'finalizado' : 'pendiente'} · creado ${formatDate(e.createdAt)}`;
+  const prev = prevPeriod(period.year, period.month);
+  const next = nextPeriod(period.year, period.month);
+  document.getElementById('shiftPrevLabel').textContent = periodLabel(prev.year, prev.month);
+  document.getElementById('shiftNextLabel').textContent = periodLabel(next.year, next.month);
+  document.getElementById('shiftFrom').textContent = periodLabel(period.year, period.month);
+  setShiftTarget(next.year, next.month);
+  document.getElementById('modalShiftWrap').removeAttribute('hidden');
+  document.querySelector('#modalShiftWrap .modal-dialog').scrollTop = 0;
+}
+
+function closeShiftModal() {
+  document.getElementById('modalShiftWrap').setAttribute('hidden', '');
+  shiftIndex = null;
+}
+
+function setShiftTarget(year, month) {
+  document.getElementById('shiftMonth').innerHTML = monthOptions(month);
+  document.getElementById('shiftYear').value = year;
+  shiftDateTouched = false;
+  updateShiftForm();
+}
+
+function updateShiftForm() {
+  const e = expenses[shiftIndex];
+  const source = loadedPeriod();
+  if (!e || !source) return;
+  const target = shiftTargetPeriod();
+  const note = document.getElementById('shiftNote');
+  const submit = document.getElementById('shiftSubmit');
+  const dateInput = document.getElementById('shiftDate');
+  const prev = prevPeriod(source.year, source.month);
+  const next = nextPeriod(source.year, source.month);
+  const sameAs = (p, q) => !!p && !!q && p.year === q.year && p.month === q.month;
+  document.getElementById('shiftPrevBtn').classList.toggle('is-active', sameAs(target, prev));
+  document.getElementById('shiftNextBtn').classList.toggle('is-active', sameAs(target, next));
+  document.getElementById('shiftTo').textContent = target ? periodLabel(target.year, target.month) : '—';
+
+  note.classList.remove('is-error');
+  if (!target || sameAs(target, source)) {
+    note.textContent = target ? 'Elige un mes distinto al actual.' : 'Escribe un año válido.';
+    note.classList.add('is-error');
+    submit.disabled = true;
+    dateInput.disabled = true;
+    return;
+  }
+  submit.disabled = false;
+  dateInput.disabled = false;
+
+  const lastDay = new Date(target.year, target.month, 0).getDate();
+  const pad = n => String(n).padStart(2, '0');
+  dateInput.min = `${target.year}-${pad(target.month)}-01`;
+  dateInput.max = `${target.year}-${pad(target.month)}-${pad(lastDay)}`;
+  if (!shiftDateTouched || !dateInput.value || dateInput.value < dateInput.min || dateInput.value > dateInput.max) {
+    dateInput.value = toDateInputValue(defaultShiftCreatedAt(source, target, e.createdAt));
+    shiftDateTouched = false;
+  }
+
+  const fromName = MONTH_NAMES[source.month];
+  const toName = MONTH_NAMES[target.month];
+  const parts = [`Se resta de ${fromName}, se suma a ${toName} y el sobrante se recalcula solo.`];
+  if (!readMonthData(target.year, target.month)) {
+    parts.push(`${toName} aún no existe: se crea con la base del mes anterior.`);
+  }
+  note.textContent = parts.join(' ');
+}
+
+function submitShiftModal() {
+  const e = expenses[shiftIndex];
+  const source = loadedPeriod();
+  const target = shiftTargetPeriod();
+  if (!canShiftMovement(e) || !source || !target) return;
+  if (target.year === source.year && target.month === source.month) return;
+
+  const dateInput = document.getElementById('shiftDate');
+  const inRange = dateInput.value && dateInput.value >= dateInput.min && dateInput.value <= dateInput.max;
+  const createdAt = inRange
+    ? fromDateInputValue(dateInput.value, e.createdAt)
+    : defaultShiftCreatedAt(source, target, e.createdAt);
+  const sourceKey = currentKey;
+  const targetKey = monthKey(target.year, target.month);
+
+  const moved = { ...e, createdAt, updatedAt: Date.now() };
+  if (moved.movedFrom === targetKey) delete moved.movedFrom; // volvió a su mes original
+  else if (!moved.movedFrom) moved.movedFrom = sourceKey;
+
+  const original = e;
+  const originalIndex = shiftIndex;
+  expenses.splice(shiftIndex, 1);
+  saveData();
+
+  const existing = readMonthData(target.year, target.month);
+  const targetData = existing || buildNewMonthData(target.year, target.month);
+  targetData.expenses.push(moved);
+  const targetJson = JSON.stringify(targetData);
+  finanzasStorage.setItem(targetKey, targetJson);
+
+  lastShift = {
+    sourceKey, targetKey, target, original, originalIndex,
+    movedJson: JSON.stringify(moved),
+    createdTarget: !existing,
+    targetJson
+  };
+
+  closeShiftModal();
+  syncCarryover();
+  render();
+  showShiftToast(`“${original.name}” se movió a ${periodLabel(target.year, target.month)}.`);
+}
+
+function showShiftToast(text) {
+  const toast = document.getElementById('shiftToast');
+  document.getElementById('shiftToastText').textContent = text;
+  toast.removeAttribute('hidden');
+  clearTimeout(shiftToastTimer);
+  shiftToastTimer = setTimeout(hideShiftToast, 8000);
+}
+
+function hideShiftToast() {
+  clearTimeout(shiftToastTimer);
+  const toast = document.getElementById('shiftToast');
+  if (toast) toast.setAttribute('hidden', '');
+}
+
+function undoLastShift() {
+  const op = lastShift;
+  lastShift = null;
+  hideShiftToast();
+  if (!op || currentKey !== op.sourceKey) return;
+  const raw = finanzasStorage.getItem(op.targetKey);
+  if (op.createdTarget && raw === op.targetJson) {
+    // El mes destino se creó solo para este movimiento y no se ha tocado: se descarta
+    finanzasStorage.removeItem(op.targetKey);
+  } else {
+    const data = readMonthData(op.target.year, op.target.month);
+    if (!data) return;
+    const idx = data.expenses.findIndex(x => JSON.stringify(x) === op.movedJson);
+    if (idx === -1) return;
+    data.expenses.splice(idx, 1);
+    finanzasStorage.setItem(op.targetKey, JSON.stringify(data));
+  }
+  expenses.splice(Math.min(op.originalIndex, expenses.length), 0, op.original);
+  saveData();
+  syncCarryover();
+  render();
+}
+
+function goToShiftTarget() {
+  const op = lastShift;
+  hideShiftToast();
+  if (!op) return;
+  document.getElementById('year').value = op.target.year;
+  document.getElementById('month').value = String(op.target.month);
+  lastShift = null;
+  loadData();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.getElementById('shiftMonth').addEventListener('change', updateShiftForm);
+document.getElementById('shiftYear').addEventListener('input', updateShiftForm);
+document.getElementById('shiftDate').addEventListener('change', () => { shiftDateTouched = true; });
+document.querySelector('#modalShiftWrap .shift-chips').addEventListener('click', ev => {
+  const btn = ev.target.closest('[data-shift-step]');
+  const source = loadedPeriod();
+  if (!btn || !source) return;
+  const p = btn.getAttribute('data-shift-step') === '1'
+    ? nextPeriod(source.year, source.month)
+    : prevPeriod(source.year, source.month);
+  setShiftTarget(p.year, p.month);
+});
+document.getElementById('shiftToastUndo').addEventListener('click', undoLastShift);
+document.getElementById('shiftToastGo').addEventListener('click', goToShiftTarget);
 
 function loadCredits() {
   try {
@@ -3641,7 +4028,17 @@ function copyExpensesFromMonth(source, baseTs) {
   });
 }
 
+// Datos iniciales de un mes que aún no existe: copia la base del mes anterior guardado
+function buildNewMonthData(year, month, baseTs) {
+  const ts = baseTs || new Date(year, month - 1, 1).getTime();
+  const previous = findPreviousMonthData(year, month);
+  return previous
+    ? { expenses: copyExpensesFromMonth(previous.expenses, ts), salary: Number(previous.salary) || 0, dismissedCreditIds: [], dismissedCardIds: [] }
+    : { expenses: defaultMonthExpenses(ts), salary: 4000000, dismissedCreditIds: [], dismissedCardIds: [] };
+}
+
 function loadData(){
+  hideShiftToast();
   currentKey = getKey();
   const dataRaw = finanzasStorage.getItem(currentKey);
   const baseTs = getMonthStartTimestamp();
@@ -3652,14 +4049,9 @@ function loadData(){
     carryDismissed = false;
     const year = Number(document.getElementById('year').value);
     const month = Number(document.getElementById('month').value);
-    const previous = findPreviousMonthData(year, month);
-    if (previous) {
-      expenses = copyExpensesFromMonth(previous.expenses, baseTs);
-      salary = Number(previous.salary) || 0;
-    } else {
-      expenses = defaultMonthExpenses(baseTs);
-      salary = 4000000;
-    }
+    const fresh = buildNewMonthData(year, month, baseTs);
+    expenses = fresh.expenses;
+    salary = fresh.salary;
     saveData();
   } else {
     const data = JSON.parse(dataRaw);
@@ -3823,6 +4215,7 @@ document.addEventListener("keydown", e => {
   const abono = document.getElementById("modalAbonoWrap");
   const creditsModal = document.getElementById("modalCreditsWrap");
   if (!del.hasAttribute("hidden")) closeDeleteModal();
+  else if (!document.getElementById("modalShiftWrap").hasAttribute("hidden")) closeShiftModal();
   else if (!move.hasAttribute("hidden")) closeMovementModal();
   else if (abono && !abono.hasAttribute("hidden")) closeAbonoModal();
   else if (!document.getElementById("modalPauseWrap").hasAttribute("hidden")) closePauseModal();
@@ -4084,6 +4477,14 @@ function savingsText(alloc, withdraw) {
   return withdraw ? `${formatCOP(alloc)} · Retiros: ${formatCOP(withdraw)}` : formatCOP(alloc);
 }
 
+const SHIFT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="13" height="15" rx="2"/><path d="M3 10h13M7 3v4M12 3v4"/><path d="M15 16h6M18 13l3 3-3 3"/></svg>';
+
+function movedFromLabel(e) {
+  const match = /^finanzas-(\d+)-(\d+)$/.exec((e && e.movedFrom) || '');
+  if (!match) return '';
+  return MONTH_NAMES[Number(match[2])] || '';
+}
+
 function render(){
   let f=0,v=0,sAllocAll=0,sWithdrawAll=0,fDone=0,vDone=0,sAlloc=0,sWithdraw=0, doneFromSalary=0, otherIncomesTotal=0, doneIncomes=0;
   let sumIncomeRows = 0, sumExpenseRows = 0;
@@ -4200,9 +4601,12 @@ function render(){
           <div>
             <strong class="move-title">${escapeHtml(e.name)}</strong>
             <span class="kind-pill ${kindPill}">${translations[movement]}</span>
-            ${e.abonoLine ? '<span class="tag-pill">abono</span>' : ''}${e.creditId && !e.abonoLine ? '<span class="tag-pill">cuota</span>' : ''}${e.cardId && !e.abonoLine ? '<span class="tag-pill">tarjeta</span>' : ''}${e.carryFrom ? '<span class="tag-pill">sobrante</span>' : ''}${enabled ? '' : '<span class="tag-pill tag-muted pill-disabled">inhabilitado</span>'}
+            ${e.abonoLine ? '<span class="tag-pill">abono</span>' : ''}${e.creditId && !e.abonoLine ? '<span class="tag-pill">cuota</span>' : ''}${e.cardId && !e.abonoLine ? '<span class="tag-pill">tarjeta</span>' : ''}${e.carryFrom ? '<span class="tag-pill">sobrante</span>' : ''}${movedFromLabel(e) ? `<span class="tag-pill tag-muted" title="Movido desde ${escapeHtml(movedFromLabel(e))}">de ${escapeHtml(movedFromLabel(e))}</span>` : ''}${enabled ? '' : '<span class="tag-pill tag-muted pill-disabled">inhabilitado</span>'}
           </div>
-          <div class="move-amount">${formatCOP(e.amount)}</div>
+          <div class="move-side">
+            <div class="move-amount">${formatCOP(e.amount)}</div>
+            ${canShiftMovement(e) ? `<button type="button" class="btn-shift-inline" onclick="openShiftModal(${i})" title="Mover a otro mes" aria-label="Mover ${escapeHtml(e.name)} a otro mes">${SHIFT_ICON}Mover</button>` : ''}
+          </div>
         </div>
         <div class="move-detail">
           <div>${translations[e.type]} · ${translations[concept]}</div>
@@ -4215,6 +4619,7 @@ function render(){
           ${enabled ? `<button type="button" class="btn-mark ${e.done?'is-done':''}" onclick="toggleDone(${i})">${doneLabel}</button>` : ''}
           <button type="button" class="btn-secondary" onclick="toggleEnabled(${i})">${enabled ? 'Inhabilitar' : 'Habilitar'}</button>
           ${e.carryFrom || e.abonoLine ? '' : `<button type="button" class="btn-secondary" onclick="openMovementModal('edit', ${i})">Editar</button>`}
+          ${canShiftMovement(e) ? `<button type="button" class="btn-secondary btn-shift" onclick="openShiftModal(${i})" title="Mover a otro mes" aria-label="Mover ${escapeHtml(e.name)} a otro mes">${SHIFT_ICON}<span class="btn-label">Mover</span></button>` : ''}
           <button type="button" class="btn-danger" onclick="openDeleteConfirmModal(${i})">Eliminar</button>
         </div>
       </article>`;
